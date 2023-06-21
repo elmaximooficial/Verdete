@@ -1,0 +1,6 @@
+[ldap]
+server = 'serverad'
+port = 389
+base_dn = 'CN=Computers, DC=pa, DC=pref'
+use_ssl = false
+user = 'Administrador'

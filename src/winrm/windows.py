@@ -1,63 +1,41 @@
 from winrm.protocol import Protocol
-from winrm.exceptions import InvalidCredentialsError, WinRMOperationTimeoutError
-from requests.exceptions import ConnectionError, ReadTimeout, InvalidURL
 from src.util.password_manager import User
-from src.util.ldap import LDAP
-import asyncio
+from enum import StrEnum
+from src.winrm.host import Host
+from winrm.exceptions import *
+from requests.exceptions import *
 
-class WinRM:
-    errors : dict
-    successes : set
+class WINRM_TRANSPORT(StrEnum):
+    NTLM = "ntlm"
+    KERBEROS = "kerberos"
 
-    def __init__(self):
-        self.errors = {}
-        self.successes = set()
 
-    def query_these_computers(self, computers : set, user : User, command : str) -> tuple:
-        for i in computers:
-            self.do_query_computer(i, user, command)
+async def create_connection(host : Host, user : User, transport : WINRM_TRANSPORT) -> (str | None):
+    if type(host.hostname) != str:
+        raise TypeError("Computer name must be a string!")
+    try:
+        conn = Protocol (
+            endpoint=f'http://{host.hostname}:{host.port}/wsman',
+            transport=transport,
+            username=user.username,
+            password=user.password,
+            server_cert_validation='ignore',
+            operation_timeout_sec=5,
+            read_timeout_sec=10
+        )
+        return (True, conn, conn.open_shell())
+    except ConnectionError:
+        return (False, None, "No route to host")
+    except InvalidCredentialsError:
+        return (False, None, "Invalid Credentials")
+    except ReadTimeout:
+        return (False, None, "Read Timeout")
 
-    def query_all_computers(self, ldap_conn : LDAP, user : User, command : str):
-        for i in ldap_conn.fetch_computers():
-            self.do_query_computer(i, user, command)
-            
-    def do_query_computer(self, computer_name : str, user : User, command : str) -> tuple:
-        print(computer_name)
-        if type(computer_name) == str:
-            conn = Protocol(
-                endpoint=f'http://{computer_name}:5985/wsman',
-                transport='ntlm',
-                username=user.username,
-                password=user.password,
-                server_cert_validation='ignore',
-                operation_timeout_sec=5,
-                read_timeout_sec=10
-            )
-            try:
-                shell_id = conn.open_shell()
-                command_id = conn.run_command(shell_id, command)
-                std_out, std_err, status_code = conn.get_command_output(shell_id, command_id)
-                conn.cleanup_command(shell_id, command_id)
-                conn.close_shell(shell_id)
-                self.successes.add(computer_name)
-                return (std_out.decode('cp860'), std_err.decode('cp860'), status_code)
-            except ConnectionError as e:
-                print(f'Couldn\'t connect to {computer_name}')
-                self.errors[computer_name] = str(e)
-                return (None, None, None)
-            except InvalidCredentialsError as e:
-                print(f'Credentials for {user.username} was rejected by {computer_name}')
-                self.errors[computer_name] = str(e)
-                return (None, None, None)
-            except ReadTimeout as e:
-                print(f'Connection timeout for computer {computer_name}')
-                self.errors[computer_name] = str(e)
-                return (None, None, None)
-            except InvalidURL as e:
-                print(f"Invalid URL for {computer_name}")
-                self.errors[computer_name] = str(e)
-                return (None, None, None)
-            except WinRMOperationTimeoutError as e:
-                print(f"Timeout on computer {computer_name}")
-                self.errors[computer_name] = str(e)
-                return (None, None, None)
+async def execute_command (host : Host, user : User, command : str, transport : WINRM_TRANSPORT, conn : Protocol, shell_id : str) -> tuple:
+    command_id = conn.run_command(shell_id, command)
+    std_out, std_err, status_code = conn.get_command_output(shell_id, command_id)
+    return (command_id, std_out.decode('cp860'), std_err.decode('cp860').strip(), status_code)
+
+async def dispose_shell(shell_id : str, command_id, connection : Protocol):
+    connection.cleanup_command(shell_id, command_id)
+    connection.close_shell(shell_id)

@@ -10,13 +10,10 @@ class User:
     password : str
     password_tag : str
 
-    def __init__(self, username, password):
+    def __init__(self, username=None, password=None):
         self.username = username
         self.password = password
-    
-    def __init__(self):
-        print('hello')
-
+        
     def load_user(pass_manager, username, password):
         try:
             user = User()

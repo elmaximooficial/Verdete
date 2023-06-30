@@ -55,15 +55,11 @@ class Main:
                 
                 computers = ['PM-CPDADM001', 'PM-CPDADM002', 'PM-CPDADM003', 'PM-CPDADM004', 'PM-SAFCPD007', 'ADM002', 'PM-NOTEINFO99']
                 
-                host_group = HostGroup("CPD", Host("PM-CPDADM001"), Host("PM-CPDADM002"), Host("PM-CPDADM004"), Host("PM-SADCPD007"), Host("ADM002"), Host("PM-NOTEINFO99"))
+                host_group = HostGroup(Host("PM-CPDADM001"), Host("PM-CPDADM002"), Host("PM-CPDADM004"), Host("PM-SAFCPD007"), Host("ADM002"), Host("PM-NOTEINFO99"), name="CPD", description="Computers from ITD")
                 
                 async for i in task_group.execute(group=host_group, user=user):
                     print(i)
                 
-                async for i in ldap_conn.fetch_computers():
-                    async for i in task_group.execute(Host(i), user):
-                        print(i)
-
 if __name__ == '__main__':
     main = Main()
     asyncio.run(main.main(sys.argv[1:]))

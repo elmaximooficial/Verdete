@@ -53,7 +53,9 @@ class TaskGroup:
             str: The JSON string containing the returned values
         """
         if host:
-            self._execute_task(user, host)
+            async for i in self._execute_task(user, host):
+                yield i
         if group:
             for i in group:
-                self._execute_task(user, i)
+                async for i in self._execute_task(user, i):
+                    yield i

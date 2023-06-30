@@ -4,6 +4,7 @@ from src.winrm.host_group import HostGroup
 from src.util.password_manager import User
 from src.util.ldap import LDAP
 from src.winrm.windows import *
+import json
 
 class TaskGroup:
     tasks : list
@@ -12,26 +13,47 @@ class TaskGroup:
     def __init__(self, *args, transport):
         self.tasks = []
         self.transport = transport
-        self.tasks.extend(iter(args))
+        self.tasks.extend(iter(args)) 
     
-    async def execute(self, host : Host, user : User, group : HostGroup = None):
-        print(host.hostname)
+    def _format_results(self, task_name : str, hostname : str, result : list):
+        raw_dict = {hostname: {}}
+        raw_dict[hostname][task_name] = {}
+        for line in result:
+            if line.strip():
+                name, value = line.split('\t')
+                raw_dict[hostname][task_name][name] = value
+        return raw_dict
+        
+    def _format_error(self, task_name : str, hostname : str, error_message : str):
+        return {hostname: {task_name: {"Error Message": error_message}}}
+    
+    async def _execute_task(self, user : User, host):
         success, conn, shell_id = await create_connection(host, user, self.transport)
         if not success:
-            yield {"Hostname": host.hostname, "Status": "Failure", "Error": shell_id}
+            yield json.dumps({host.hostname: {"Status": "Failure", "Error": shell_id}}, indent=4)
         else:
-            raw_dict = {host.hostname: {}}
             for i in self.tasks:
                 command_id, stdout, stderr, status = await execute_command(host, user, i.script, self.transport, conn, shell_id)
                 conn.cleanup_command(shell_id, command_id)
-                if status == 0 and len(stdout) >= 5:
-                    raw_dict[host.hostname][i.name] = {}
-                    for line in stdout.replace('\r', '').split('\n'):
-                        if line.strip():
-                            name, value = line.split('\t')
-                            raw_dict[host.hostname][i.name][name] = value
+                if status != 0 or len(stdout) < 5:
+                    yield json.dumps(self._format_error(i.name, host.hostname, stderr))
                 else:
-                    raw_dict[host.hostname][i.name]["Hostname"] = host.hostname
-                    raw_dict[host.hostname][i.name]["Error Message"] = stderr
+                    yield json.dumps(self._format_results(i.name, host.hostname, stdout.replace('\r', '').split('\n')), indent=4)
             conn.close_shell(shell_id)
-            yield raw_dict
+    
+    async def execute(self, user : User, group : HostGroup = None, host : Host = None, ):
+        """Executes the Task group on the determined host or host group, returns a string formatted in json with 4 space indentation
+
+        Args:
+            host (Host): The host this Task group should be executed on
+            user (User): The User for authenticating the connection on the remote WinRM port
+            group (HostGroup, optional): The Host Group this Task Group should be executed on. Defaults to None.
+
+        Yields:
+            str: The JSON string containing the returned values
+        """
+        if host:
+            self._execute_task(user, host)
+        if group:
+            for i in group:
+                self._execute_task(user, i)

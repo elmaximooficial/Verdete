@@ -1,6 +1,6 @@
 from __future__ import annotations
 from src.util.password_manager import User
-from src.winrm.windows import execute_command, WINRM_TRANSPORT
+from src.winrm.windows import *
 from src.winrm.host import Host
 from enum import StrEnum
 from winrm.exceptions import *
@@ -65,6 +65,10 @@ class Task:
         self.post_check_alternative = post_check_alternative
         self.transport = transport
         
+    async def _execute_pre_check(self, host : Host, user : User):
+        success, conn, shell_id = await create_connection(host, user, self.transport)
+        if not success:
+            yield    
     async def execute(self, 
                 host : Host, 
                 user : User) -> str:

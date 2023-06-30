@@ -6,6 +6,7 @@ from src.winrm.task import Task, FAILURE_ACTION
 from src.winrm.task_group import TaskGroup
 from src.winrm.host import Host
 from src.util.password_manager import PasswordManager, User
+from src.winrm.host_group import HostGroup
 from getpass import getpass
 import json
 
@@ -54,57 +55,14 @@ class Main:
                 
                 computers = ['PM-CPDADM001', 'PM-CPDADM002', 'PM-CPDADM003', 'PM-CPDADM004', 'PM-SAFCPD007', 'ADM002', 'PM-NOTEINFO99']
                 
+                host_group = HostGroup("CPD", Host("PM-CPDADM001"), Host("PM-CPDADM002"), Host("PM-CPDADM004"), Host("PM-SADCPD007"), Host("ADM002"), Host("PM-NOTEINFO99"))
+                
+                async for i in task_group.execute(group=host_group, user=user):
+                    print(i)
+                
                 async for i in ldap_conn.fetch_computers():
                     async for i in task_group.execute(Host(i), user):
-                        print(json.dumps(i, indent=4))
-                    #out, err, status = await cpu_task.execute(Host(i), user)
-                    #if out is None:
-                    #    info_dict["Hostname"] = i
-                    #    info_dict["Error"] = status
-                    #    info_dict["Username"] = user.username
-                    #    info_dict["Transport"] = cpu_task.transport
-                    #    info_dict["Script"] = cpu_task.script
-                    #else:
-                    #    name, caption, noc, nolp, _ = out.split('\r\n')
-                    #    info_dict["Hostname"] = i
-                    #    info_dict["CPU"] = {}
-                    #    info_dict["CPU"]["Name"] = name
-                    #    info_dict["CPU"]["Caption"] = caption
-                    #    info_dict["CPU"]["Number of Cores"] = noc
-                    #    info_dict["CPU"]["Number of Threads"] = nolp
-                    #out, err, status = await os_task.execute(Host(i), user)
-                    #if out is None:
-                    #    info_dict["Hostname"] = i
-                    #    info_dict["Error"] = status
-                    #    info_dict["Username"] = user.username
-                    #    info_dict["Transport"] = os_task.transport
-                    #    info_dict["Script"] += os_task.script
-                    #else:
-                    #    caption, build_number, os_architecture, description, _ = out.split('\r\n')
-                    #    info_dict["OS"] = {}
-                    #    info_dict["OS"]["Version"] = caption
-                    #    info_dict["OS"]["Build Number"] = build_number
-                    #    info_dict["OS"]["Description"] = description
-                    #    info_dict["OS"]["Architecture"] = os_architecture
-                    #out, err, status = await net_task.execute(Host(i), user)
-                    #if out is None:
-                    #    info_dict["Hostname"] = i
-                    #    info_dict["Error"] = status
-                    #    info_dict["Username"] = user.username
-                    #    info_dict["Transport"] = net_task.transport
-                    #    info_dict["Script"] += net_task.script
-                    #else:
-                    #    ip_address, default_ip_gateway, description, index, dhcp_enabled, _ = out.split("\r\n")
-                    #    info_dict["Networking"] = {}
-                    #    info_dict["Networking"]["IP Address"] = ip_address
-                    #    info_dict["Networking"]["Default Gateway"] = default_ip_gateway
-                    #    info_dict["Networking"]["Description"] = description
-                    #    info_dict["Networking"]["NIC Index"] = index
-                    #    info_dict["Networking"]["DHCP Enabled"] = dhcp_enabled
-                    #print(json.dumps(info_dict, indent=2))
-                    
-                        
-
+                        print(i)
 
 if __name__ == '__main__':
     main = Main()

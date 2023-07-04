@@ -30,6 +30,8 @@ async def create_connection(host : Host, user : User, transport : WINRM_TRANSPOR
         return (False, None, "Invalid Credentials")
     except ReadTimeout:
         return (False, None, "Read Timeout")
+    except WinRMOperationTimeoutError:
+        return (False, None, "Operation Timeout")
 
 async def execute_command (host : Host, user : User, command : str, transport : WINRM_TRANSPORT, conn : Protocol, shell_id : str) -> tuple:
     command_id = conn.run_command(shell_id, command)

@@ -9,5 +9,11 @@
 			"editor.defaultFormatter": "ms-python.python"
 		},
 		"python.formatting.provider": "none"
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+		
+		]
 	}
 }

@@ -16,21 +16,21 @@ class TaskGroup:
         self.tasks.extend(iter(args)) 
     
     def _format_results(self, task_name : str, hostname : str, result : list):
-        raw_dict = {hostname: {}}
-        raw_dict[hostname][task_name] = {}
+        raw_dict = {"Hostname": hostname, "Status" : "Success", "Results" : {}}
+        raw_dict["Results"][task_name] = {}
         for line in result:
             if line.strip():
                 name, value = line.split('\t')
-                raw_dict[hostname][task_name][name] = value
+                raw_dict["Results"][task_name][name] = value
         return raw_dict
         
     def _format_error(self, task_name : str, hostname : str, error_message : str):
-        return {hostname: {task_name: {"Error Message": error_message}}}
+        return {"Hostname": hostname, "Status": "Failure", "Results": {task_name: {"Error Message": error_message}}}
     
     async def _execute_task(self, user : User, host):
         success, conn, shell_id = await create_connection(host, user, self.transport)
         if not success:
-            yield json.dumps({host.hostname: {"Status": "Failure", "Error": shell_id}}, indent=4)
+            yield json.dumps({"Hostname": host.hostname, "Status": "Failure", "Error": shell_id}, indent=4)
         else:
             for i in self.tasks:
                 command_id, stdout, stderr, status = await execute_command(host, user, i.script, self.transport, conn, shell_id)

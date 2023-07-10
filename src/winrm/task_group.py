@@ -4,11 +4,13 @@ from src.winrm.host_group import HostGroup
 from src.util.password_manager import User
 from src.util.ldap import LDAP
 from src.winrm.windows import *
+from src.database.db_handler import DBHandler
 import json
 
 class TaskGroup:
     tasks : list
     transport : WINRM_TRANSPORT
+    current_task : str
     
     def __init__(self, *args, transport):
         self.tasks = []
@@ -33,7 +35,8 @@ class TaskGroup:
             yield json.dumps({"Hostname": host.hostname, "Status": "Failure", "Error": shell_id}, indent=4)
         else:
             for i in self.tasks:
-                command_id, stdout, stderr, status = await execute_command(host, user, i.script, self.transport, conn, shell_id)
+                self.current_task = i.name
+                command_id, stdout, stderr, status = await execute_command(host, user, i.stages["Stages"][1], self.transport, conn, shell_id)
                 conn.cleanup_command(shell_id, command_id)
                 if status != 0 or len(stdout) < 5:
                     yield json.dumps(self._format_error(i.name, host.hostname, stderr))
@@ -41,7 +44,14 @@ class TaskGroup:
                     yield json.dumps(self._format_results(i.name, host.hostname, stdout.replace('\r', '').split('\n')), indent=4)
             conn.close_shell(shell_id)
     
-    async def execute(self, user : User, group : HostGroup = None, host : Host = None, ):
+    async def __insert_into_db(self, value : str, handler : DBHandler, collection):
+        if handler.is_connected:
+            print(json.loads(value))
+            handler.insert(collection, json.loads(value))
+        else:
+            raise RuntimeError("Database is not connected")
+    
+    async def execute(self, user : User, group : HostGroup = None, host : Host = None, debug : bool = False, db_handler : DBHandler = None, collection = None):
         """Executes the Task group on the determined host or host group, returns a string formatted in json with 4 space indentation
 
         Args:
@@ -54,8 +64,14 @@ class TaskGroup:
         """
         if host:
             async for i in self._execute_task(user, host):
-                yield i
+                if debug:
+                    yield i
+                else:
+                    await self.__insert_into_db(i, db_handler, collection)
         if group:
             for i in group:
-                async for i in self._execute_task(user, i):
-                    yield i
+                async for j in self._execute_task(user, i):
+                    if debug:
+                        yield j
+                    else:
+                        await self.__insert_into_db(j, db_handler, collection)

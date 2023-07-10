@@ -12,7 +12,7 @@ class WINRM_TRANSPORT(StrEnum):
 
 async def create_connection(host : Host, user : User, transport : WINRM_TRANSPORT) -> (str | None):
     if type(host.hostname) != str:
-        raise TypeError("Computer name must be a string!")
+        print(f"Computer name must be a string! {host.hostname}")
     try:
         conn = Protocol (
             endpoint=f'http://{host.hostname}:{host.port}/wsman',
@@ -32,6 +32,8 @@ async def create_connection(host : Host, user : User, transport : WINRM_TRANSPOR
         return (False, None, "Read Timeout")
     except WinRMOperationTimeoutError:
         return (False, None, "Operation Timeout")
+    except InvalidURL:
+        return (False, None, "Invalid URL")
 
 async def execute_command (host : Host, user : User, command : str, transport : WINRM_TRANSPORT, conn : Protocol, shell_id : str) -> tuple:
     command_id = conn.run_command(shell_id, command)

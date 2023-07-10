@@ -88,7 +88,7 @@ class LDAP:
         response, _ = self.__conn.get_response(message_id)
         for i in response:
             for key, value in i.items():
-                if(key == "attributes"):
+                if key == "attributes" and type(key) == str and key:
                     yield value['dNSHostName']
     async def dispose_connection(self):
         """ Unbinds the LDAP connection

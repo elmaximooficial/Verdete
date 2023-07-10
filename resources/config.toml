@@ -4,3 +4,7 @@ port = 389
 base_dn = 'CN=Computers, DC=pa, DC=pref'
 use_ssl = false
 user = 'Administrador'
+[mongodb]
+server = '10.250.240.8'
+user = 'cpd'
+password = '123456'

@@ -7,8 +7,10 @@ from src.winrm.task_group import TaskGroup
 from src.winrm.host import Host
 from src.util.password_manager import PasswordManager, User
 from src.winrm.host_group import HostGroup
+from src.database.db_handler import DBHandler
 from getpass import getpass
 import json
+import aiofiles
 
 ########## Configuration file format ##########
 #### [ldap]                              
@@ -18,6 +20,12 @@ import json
 #### use_ssl = Allow for ssl
 #### user = User for connection to the database
 #### domain = User domain name
+#### [mongodb]
+#### server = address_to_server
+#### port = server_port
+#### user = server's user
+#### password = password
+#### database = database
 
 def hostname_check(result : dict):
     print(result["Results"]["OS"]["Hostname"])
@@ -50,24 +58,29 @@ class Main:
                 
                 wmi_check = lambda x: x != None
                 cpu_task = Task(name="CPU", 
-                                pre_check=r'powershell -c " """Hostname`t$(hostname)""" "', 
-                                pre_checking=wmi_check, pre_check_failure_action=FAILURE_ACTION.STOP_EXECUTION,
-                                script=r'powershell -c " $_ = Get-WmiObject Win32_Processor; Invoke-Command {"""Name`t$($_.Name)`nCaption`t$($_.Caption)`nNumber of Cores`t$($_.NumberOfCores)`nNumber of Logical Processors`t$($_.NumberOfLogicalProcessors)"""}"', 
-                                script_checking=wmi_check, 
-                                script_failure_action=FAILURE_ACTION.STOP_EXECUTION, 
-                                transport=WINRM_TRANSPORT.NTLM)
+                #            pre_check=r'powershell -c " """Hostname`t$(hostname)""" "', 
+                #            pre_checking=wmi_check, 
+                #            pre_check_failure_action=FAILURE_ACTION.STOP_EXECUTION,
+                            script=r'powershell -c " $_ = Get-WmiObject Win32_Processor; Invoke-Command {"""Name`t$($_.Name)`nCaption`t$($_.Caption)`nNumber of Cores`t$($_.NumberOfCores)`nNumber of Logical Processors`t$($_.NumberOfLogicalProcessors)"""}"', 
+                            script_checking=wmi_check, 
+                            script_failure_action=FAILURE_ACTION.STOP_EXECUTION, 
+                            transport=WINRM_TRANSPORT.NTLM)
                 os_task = Task(name="OS", 
-                            pre_check=r'powershell -c " """Hostname`t$($hostname)""" "', 
-                            pre_checking=hostname_check, 
-                            pre_check_failure_action=FAILURE_ACTION.ALTERNATIVE_TASK, 
-                            pre_check_alternative=cpu_task, 
+                #            pre_check=r'powershell -c " """Hostname`t$($hostname)""" "', 
+                #            pre_checking=hostname_check, 
+                #            pre_check_failure_action=FAILURE_ACTION.ALTERNATIVE_TASK, 
+                #            pre_check_alternative=cpu_task, 
                             script=r'powershell -c "$_ = Get-WmiObject Win32_OperatingSystem; Invoke-Command {"""Caption`t$($_.Caption)`nBuild Number`t$($_.BuildNumber)`nOS Architecture`t$($_.OSArchitecture)`nDescription`t$($_.Description)"""}"', 
                             script_checking=wmi_check,
                             script_failure_action=FAILURE_ACTION.STOP_EXECUTION, 
                             transport=WINRM_TRANSPORT.NTLM)
-                #net_task = Task("Networking", r'powershell -c "$_ = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $True}; Invoke-Command {"""IP Address`t$($_.IPAddress[0])`nDefault Gateway`t$($_.DefaultIPGateway[0])`nDescription`t$($_.Description)`nIndex`t$($_.Index)`nDHCP Enabled`t$($_.DHCPEnabled)"""}"', FAILURE_ACTION.STOP_EXECUTION, WINRM_TRANSPORT.NTLM)
+                net_task = Task(name="Networking", 
+                            script=r'powershell -c "$_ = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $True}; Invoke-Command {"""IP Address`t$($_.IPAddress[0])`nDefault Gateway`t$($_.DefaultIPGateway[0])`nDescription`t$($_.Description)`nIndex`t$($_.Index)`nDHCP Enabled`t$($_.DHCPEnabled)"""}"', 
+                            script_checking=wmi_check,
+                            script_failure_action=FAILURE_ACTION.STOP_EXECUTION, 
+                            transport=WINRM_TRANSPORT.NTLM)
                 
-                #task_group = TaskGroup(cpu_task, os_task, net_task, transport=WINRM_TRANSPORT.NTLM)
+                task_group = TaskGroup(cpu_task, os_task, net_task, transport=WINRM_TRANSPORT.NTLM)
                 
                 computers = ['PM-CPDADM001', 'PM-CPDADM002', 'PM-CPDADM003', 'PM-CPDADM004', 'PM-SAFCPD007', 'ADM002', 'PM-NOTEINFO99']
                 
@@ -75,21 +88,20 @@ class Main:
                 
                 
                 available = HostGroup(name="Available", description="All Computers Available")
-                for i in computers:
-                    async for j in os_task.execute(Host(i), user):
-                        print(j)
+                #for i in computers:
+                #    async for j in os_task.execute(Host(i), user):
+                #        print(j)
                 
                 #async for i in task_group.execute(group=host_group, user=user):
                 #    print(i)
                 #    if json.loads(i)["Status"] == "Success":
-                #        available.hosts.append(Host(json.loads(i)["Hostname"]))
-                
-                #async for i in ldap_conn.fetch_computers():
-                #    async for j in task_group.execute(host=Host(i), user=user):
-                #        print(j)
-                #        if json.loads(j)[i]["Status"] != "Success" and json.loads(j)[i]["Error"] == "No route to host":
-                #            unavailable.hosts.append(Host(i))
-                
+                #        available.hosts.append(Host(json.loads(i)["Hostname"])
+                    
+                db_handler = DBHandler()
+                collection = db_handler.connect(collection='hosts')
+                async for i in ldap_conn.fetch_computers():
+                    async for i in task_group.execute(host=Host(i), user=user, db_handler=db_handler, collection=collection):
+                        print(i)
 if __name__ == '__main__':
     main = Main()
     asyncio.run(main.main(sys.argv[1:]))

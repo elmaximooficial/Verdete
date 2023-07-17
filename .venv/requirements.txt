@@ -1,0 +1,8 @@
+pywinrm
+pywinrm[kerberos]
+pycryptodome
+ldap3
+krb5
+gssapi
+toml
+pymongo

@@ -55,7 +55,12 @@ class DBHandler:
             return collection
     
     def insert(self, collection, value : dict):
+        collection = self.__connection.verdete.get_collection(collection)
         collection.insert_one(value)
+    
+    def upsert(self, collection, value : dict):
+        collection = self.__connection.verdete.get_collection(collection)
+        collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
     
     def close(self):
         self.__connection.close()

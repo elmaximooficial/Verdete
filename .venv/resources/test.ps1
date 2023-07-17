@@ -1,3 +1,0 @@
-if (hostname -match 'CPD'){
-    
-}

@@ -55,11 +55,11 @@ class DBHandler:
             self.is_connected = True
             return collection
     
-    def insert(self, collection, value : dict):
+    async def insert(self, collection, value : dict):
         collection = self.__connection.verdete.get_collection(collection)
         await collection.insert_one(value)
     
-    def upsert(self, collection, value : dict):
+    async def upsert(self, collection, value : dict):
         collection = self.__connection.verdete.get_collection(collection)
         await collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
     

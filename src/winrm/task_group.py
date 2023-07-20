@@ -84,10 +84,10 @@ class TaskGroup:
     async def __insert_into_db(self, value: str, handler: DBHandler, collection):
         print("Inserting into DB")
         if collection == "Failure":
-                handler.insert(collection, json.loads(value))
+                await handler.insert(collection, json.loads(value))
         if handler.is_connected:
-            handler.upsert(collection, json.loads(value))
-            handler.upsert("Hosts", {"Hostname": json.loads(value)["Hostname"],
+            await handler.upsert(collection, json.loads(value))
+            await handler.upsert("Hosts", {"Hostname": json.loads(value)["Hostname"],
                                      "Status": json.loads(value)["Status"],
                                      "Last Communication": datetime.now().isoformat()
                                      })

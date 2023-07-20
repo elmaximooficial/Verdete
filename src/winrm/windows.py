@@ -54,7 +54,7 @@ async def execute_command (host : Host, user : User, command : str, transport : 
     try:
         print(f"Encoding command {host.hostname}")
         loop = asyncio.get_running_loop()
-        with concurrent.futures.ProcessPoolExecutor(max_workers=5) as exe:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=150) as exe:
             encoded = await loop.run_in_executor(
                 exe,
                 functools.partial(__encode_command, command=command))

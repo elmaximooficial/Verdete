@@ -53,6 +53,7 @@ class TaskGroup:
         except WinRMError:
             yield json.dumps({"Hostname": host.hostname, "Status": "Failure", "Timestamp": datetime.now().isoformat(), "Error": "Max Connections Exceeded"}, indent=2)
         if not success:
+            print("Formatting Error in JSON")
             yield json.dumps({"Hostname": host.hostname,
                               "Status": "Failure",
                               "Timestamp": datetime.now().isoformat(),
@@ -72,6 +73,7 @@ class TaskGroup:
                 if status != 0 or len(stdout) < 5:
                     yield json.dumps(self._format_error(host.hostname, stderr))
                 else:
+                    print("Formatting results in JSON")
                     formatted = None
                     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as exe:
                         formatted = await asyncio.get_event_loop().run_in_executor(exe, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
@@ -80,6 +82,7 @@ class TaskGroup:
             conn.close_shell(shell_id)
     
     async def __insert_into_db(self, value: str, handler: DBHandler, collection):
+        print("Inserting into DB")
         if collection == "Failure":
             handler.insert(collection, json.loads(value))
         if handler.is_connected:

@@ -73,4 +73,4 @@ class Main:
                         task = tg.create_task(task_group.execute(host=i, user=user, db_handler=db_handler, debug=False))
 if __name__ == '__main__':
     main = Main()
-    asyncio.run(main.main(sys.argv[1:]), debug=True)
+    asyncio.run(main.main(sys.argv[1:]), debug=False)

@@ -51,16 +51,18 @@ def __encode_command(command):
     return b64encode(command.encode('utf_16_le')).decode('ascii')
 
 async def execute_command (host : Host, user : User, command : str, transport : WINRM_TRANSPORT, conn : Protocol, shell_id : str) -> tuple:
-    winrm.Session
     try:
+        print(f"Encoding command {host.hostname}")
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=50) as exe:
             encoded = await loop.run_in_executor(
                 exe,
                 functools.partial(__encode_command, command=command))
+            print(f"Executing command {host.hostname}")
             command_id = await loop.run_in_executor(exe,
                                                     functools.partial(conn.run_command, shell_id=shell_id, command='powershell -encodedcommand {0}'.format(encoded)))
             try:
+                print(f"Parsing Results {host.hostname}")
                 rs = await loop.run_in_executor(exe, functools.partial(Response, args=conn.get_command_output(shell_id, command_id)))
             except ReadTimeout:
                 return (command_id, None, None, "Read Timeout")

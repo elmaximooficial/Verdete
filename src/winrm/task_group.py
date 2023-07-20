@@ -83,18 +83,16 @@ class TaskGroup:
     
     async def __insert_into_db(self, value: str, handler: DBHandler, collection):
         print("Inserting into DB")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as exe:
-            loop = asyncio.get_running_loop()
-            if collection == "Failure":
-                    await loop.run_in_executor(exe, functools.partial(handler.insert, collection=collection, value=json.loads(value)))
-            if handler.is_connected:
-                await loop.run_in_executor(exe, functools.partial(handler.upsert, collection=collection, value=json.loads(value)))
-                await loop.run_in_executor(exe, functools.partial(handler.upsert, collection="Hosts", value={"Hostname": json.loads(value)["Hostname"],
-                                         "Status": json.loads(value)["Status"],
-                                         "Last Communication": datetime.now().isoformat()
-                                         }))
-            else:
-                raise RuntimeError("Database is not connected")
+        if collection == "Failure":
+                handler.insert(collection, json.loads(value))
+        if handler.is_connected:
+            handler.upsert(collection, json.loads(value))
+            handler.upsert("Hosts", {"Hostname": json.loads(value)["Hostname"],
+                                     "Status": json.loads(value)["Status"],
+                                     "Last Communication": datetime.now().isoformat()
+                                     })
+        else:
+            raise RuntimeError("Database is not connected")
     
     async def execute(self,
                       user: User,

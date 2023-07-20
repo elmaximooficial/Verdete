@@ -1,5 +1,6 @@
 import pymongo
 from pymongo import InsertOne, MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 import json
 import os
 import toml
@@ -48,7 +49,7 @@ class DBHandler:
         if not collection:
             raise ValueError("Collection must not be null")
         else:
-            self.__connection = pymongo.MongoClient(f"mongodb://{self.__user}:{self.__password}@{self.__server}:{self.__port}")
+            self.__connection = AsyncIOMotorClient(f"mongodb://{self.__user}:{self.__password}@{self.__server}:{self.__port}")
             database = self.__connection.verdete
             collection = database.get_collection(collection)
             self.is_connected = True
@@ -56,11 +57,11 @@ class DBHandler:
     
     def insert(self, collection, value : dict):
         collection = self.__connection.verdete.get_collection(collection)
-        collection.insert_one(value)
+        await collection.insert_one(value)
     
     def upsert(self, collection, value : dict):
         collection = self.__connection.verdete.get_collection(collection)
-        collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
+        await collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
     
     def close(self):
         self.__connection.close()

@@ -6,3 +6,4 @@ krb5
 gssapi
 toml
 pymongo
+motor

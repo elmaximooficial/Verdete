@@ -75,7 +75,7 @@ class TaskGroup:
                 else:
                     print("Formatting results in JSON")
                     formatted = None
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as exe:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as exe:
                         formatted = await asyncio.get_event_loop().run_in_executor(exe, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
                     for i in formatted:
                         yield i

@@ -44,7 +44,7 @@ class DBHandler:
     def __init__(self):
         self.__fetch_configuration()
     
-    def connect(self, collection : str):
+    def connect(self, collection: str):
         if not collection:
             raise ValueError("Collection must not be null")
         else:

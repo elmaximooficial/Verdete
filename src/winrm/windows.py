@@ -71,5 +71,6 @@ async def execute_command (host : Host, user : User, command : str, transport : 
         return(None, host.hostname, "The system couldn't find the specified file", "")
     
 async def dispose_shell(shell_id : str, command_id, connection : Protocol):
+    print("Disposing Shell")
     connection.cleanup_command(shell_id, command_id)
     connection.close_shell(shell_id)

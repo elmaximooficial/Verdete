@@ -30,10 +30,11 @@ async def create_connection(host: Host, user: User, transport: WINRM_TRANSPORT) 
             username=user.username,
             password=user.password,
             server_cert_validation='ignore',
-            operation_timeout_sec=5,
-            read_timeout_sec=10
+            operation_timeout_sec=60,
+            read_timeout_sec=360
         )
-        shell = conn.open_shell()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
+            shell = await asyncio.get_running_loop().run_in_executor(exe, conn.open_shell)
         return (True, conn, shell)
     except ConnectionError:
         return (False, None, "No route to host")

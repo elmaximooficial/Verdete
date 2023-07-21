@@ -69,8 +69,8 @@ class Main:
                 async for j in ldap_conn.fetch_computers():
                     computers.hosts.append(Host(j))
                 async with asyncio.TaskGroup() as tg:
-                    async for i in computers:
-                        task = tg.create_task(task_group.execute(host=i, user=user, db_handler=db_handler, debug=True if i in ['debug'] else False))
+                    async for j in computers:
+                        task = tg.create_task(task_group.execute(host=j, user=user, db_handler=db_handler, debug=True if i in ['debug'] else False))
 if __name__ == '__main__':
     main = Main()
     asyncio.run(main.main(sys.argv[1:]), debug=False)

@@ -31,7 +31,7 @@ async def create_connection(host: Host, user: User, transport: WINRM_TRANSPORT) 
             password=user.password,
             server_cert_validation='ignore',
             operation_timeout_sec=30,
-            read_timeout_sec=45
+            read_timeout_sec=360
         )
         shell = None
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:

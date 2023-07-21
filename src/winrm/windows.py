@@ -58,12 +58,15 @@ async def execute_command (host : Host, user : User, command : str, transport : 
             encoded = await loop.run_in_executor(
                 exe,
                 functools.partial(__encode_command, command=command))
+            print(f"Done encoding command {host.hostname}")
             print(f"Executing command {host.hostname}")
             command_id = await loop.run_in_executor(exe,
                                                     functools.partial(conn.run_command, shell_id=shell_id, command='powershell -encodedcommand {0}'.format(encoded)))
+            print(f"Done Executing command {host.hostname}")
             try:
                 print(f"Parsing Results {host.hostname}")
                 rs = await loop.run_in_executor(exe, functools.partial(Response, args=conn.get_command_output(shell_id, command_id)))
+                print(f"Done parsing results {host.hostname}")
             except ReadTimeout:
                 return (command_id, None, None, "Read Timeout")
         return (command_id, rs.std_out.decode('cp860'), rs.std_err.decode('cp860').strip(), rs.status_code)

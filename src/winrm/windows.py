@@ -48,6 +48,8 @@ async def create_connection(host: Host, user: User, transport: WINRM_TRANSPORT) 
         return (False, None, "Operation Timeout")
     except InvalidURL:
         return (False, None, "Invalid URL")
+    except WinRMError:
+        return (False, None, "WinRM Error")
 
 def __encode_command(command):
     return b64encode(command.encode('utf_16_le')).decode('ascii')

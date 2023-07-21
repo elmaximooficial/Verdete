@@ -69,20 +69,24 @@ class TaskGroup:
                                                                            conn,
                                                                            shell_id)
                 if command_id:
-                    conn.cleanup_command(shell_id, command_id)
+                    try:
+                        conn.cleanup_command(shell_id, command_id)
+                    except:
+                        print("Exeception cleaning command up")
                 if status != 0 or len(stdout) < 5:
                     yield json.dumps(self._format_error(host.hostname, stderr))
                 else:
-                    print(f"Formatting results in JSON {self.current_task}")
+                    print(f"Formatting results in JSON for task {self.current_task}")
                     formatted = None
                     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as exe:
                         formatted = await asyncio.get_event_loop().run_in_executor(exe, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
+                    print(f"Done formatting results for task {self.current_task}")
                     for i in formatted:
                         yield i
             conn.close_shell(shell_id)
     
     def __insert_into_db(self, value: str, handler: DBHandler, collection):
-        print(f"Inserting into collection")
+        print(f"Inserting into collection {collection}")
         if collection == "Failure":
             handler.insert(collection, json.loads(value))
         if handler.is_connected:
@@ -93,6 +97,7 @@ class TaskGroup:
                                      })
         else:
             raise RuntimeError("Database is not connected")
+        print(f"Done Inserting into collection {collection}")
     
     async def execute(self,
                       user: User,

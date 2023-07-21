@@ -109,17 +109,4 @@ share_task = Task(name="Share",
 
 task_group = TaskGroup(
     cpu_task,
-    os_task,
-    net_task,
-    computer_task,
-    printer_task,
-    physical_memory_task,
-    base_board_task,
-    disk_drive_task,
-    video_controller_task,
-    bios_task,
-    desktop_monitor_task,
-    product_task,
-    service_task,
-    share_task,
     transport=WINRM_TRANSPORT.NTLM)

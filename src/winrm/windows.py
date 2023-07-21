@@ -78,7 +78,11 @@ async def execute_command (host : Host, user : User, command : str, transport : 
                 print(f"Done parsing results {host.hostname}")
             except ReadTimeout:
                 return (command_id, None, None, "Read Timeout")
-        return (command_id, rs.std_out.decode('cp860'), rs.std_err.decode('cp860').strip(), rs.status_code)
+            print(f"Decoding results for {host.hostname}")
+            out = rs.std_out.decode('cp860')
+            err = rs.std_out.decode('cp860').strip()
+            print(f"Done decoding for {host.hostname}")
+        return (command_id, out, err, rs.status_code)
     except WinRMError:
         return(None, host.hostname, "The system couldn't find the specified file", "")
     

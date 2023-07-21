@@ -82,7 +82,7 @@ class TaskGroup:
             conn.close_shell(shell_id)
     
     async def __insert_into_db(self, value: str, handler: DBHandler, collection):
-        print(f"Inserting into DB {self.current_task}")
+        print(f"Inserting into collection")
         if collection == "Failure":
                 await handler.insert(collection, json.loads(value))
         if handler.is_connected:

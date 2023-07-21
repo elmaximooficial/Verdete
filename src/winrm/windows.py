@@ -66,7 +66,8 @@ async def execute_command (host : Host, user : User, command : str, transport : 
             print(f"Done Executing command {host.hostname}")
             try:
                 print(f"Parsing Results {host.hostname}")
-                rs = await loop.run_in_executor(exe, functools.partial(Response, args=conn.get_command_output(shell_id, command_id)))
+                cmd_output = await loop.run_in_executor(exe, functools.partail(conn.get_command_output, shell_id=shell_id, command_id=command_id))
+                rs = await loop.run_in_executor(exe, functools.partial(Response, args=cmd_output))
                 print(f"Done parsing results {host.hostname}")
             except ReadTimeout:
                 return (command_id, None, None, "Read Timeout")

@@ -70,7 +70,7 @@ class Main:
                     computers.hosts.append(Host(j))
                 async with asyncio.TaskGroup() as tg:
                     async for j in computers:
-                        task = tg.create_task(task_group.execute(host=j, user=user, db_handler=db_handler, debug=True if i in ['--debug'] else False))
+                        task = tg.create_task(task_group.execute(host=j, user=user, db_handler=db_handler, debug=True))
 if __name__ == '__main__':
     main = Main()
     asyncio.run(main.main(sys.argv[1:]), debug=False)

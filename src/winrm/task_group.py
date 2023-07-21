@@ -76,7 +76,7 @@ class TaskGroup:
         print(f"Inserting into collection {collection}")
         if collection == "Failure":
             handler.insert(collection, json.loads(value))
-        if handler.is_connected:
+        elif handler.is_connected:
             handler.upsert(collection, json.loads(value))
         else:
             raise RuntimeError("Database is not connected")

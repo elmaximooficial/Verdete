@@ -105,10 +105,11 @@ class TaskGroup:
                 if debug:
                     print(i)
                 else:
-                    self.__insert_into_db(i,
-                                                db_handler,
-                                                self.current_task if json.loads(i)["Status"] != "Failure" else "Failure"
-                                                )
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
+                        await asyncio.get_running_loop().run_in_executor(exe, functools.partial(self.__insert_into_db, value=i,
+                                                    db_handler=db_handler,
+                                                    collection=self.current_task if json.loads(i)["Status"] != "Failure" else "Failure"
+                                                    ))
         if group:
             async for i in group:
                 async for j in self._execute_task(user, i):

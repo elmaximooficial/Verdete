@@ -36,7 +36,7 @@ class TaskGroup:
                 "Error Message": error_message
                 }
 
-    def _format(self, stdout:str, hostname: str):
+    def _format(self, stdout: str, hostname: str):
         json_out = []
         reader = csv.DictReader(stdout.split('\n')[1:])
         for row in reader:
@@ -81,7 +81,7 @@ class TaskGroup:
                 else:
                     print(f"Formatting results in JSON for task {self.current_task}")
                     formatted = None
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as exe:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
                         formatted = await asyncio.get_event_loop().run_in_executor(exe, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
                     print(f"Done formatting results for task {self.current_task}")
                     for i in formatted:

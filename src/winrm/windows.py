@@ -34,7 +34,7 @@ async def create_connection(host: Host, user: User, transport: WINRM_TRANSPORT) 
             read_timeout_sec=360
         )
         shell = None
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
             shell = await asyncio.get_running_loop().run_in_executor(exe, conn.open_shell)
         return (True, conn, shell)
     except ConnectionError:
@@ -55,7 +55,7 @@ async def execute_command (host : Host, user : User, command : str, transport : 
     try:
         print(f"Encoding command {host.hostname}")
         loop = asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=150) as exe:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
             encoded = await loop.run_in_executor(
                 exe,
                 functools.partial(__encode_command, command=command))

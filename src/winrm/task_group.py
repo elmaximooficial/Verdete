@@ -73,7 +73,9 @@ class TaskGroup:
                                                                            shell_id)
                 if command_id:
                     try:
-                        conn.cleanup_command(shell_id, command_id)
+                        print(f"Cleaning up command {self.current_task} for {host.hostname}")
+                        await asyncio.get_running_loop().run_in_executor(exe, functools.partial(conn.cleanup_command, shell_id=shell_id, command_id=command_id))
+                        print(f"Done cleaning command {self.current_task} for {host.hostname}")
                     except:
                         print("Exeception cleaning command")
                 if status != 0 or len(stdout) < 5:
@@ -82,12 +84,12 @@ class TaskGroup:
                     print(f"Formatting results in JSON for task {self.current_task} related to host {host.hostname}")
                     formatted = None
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
-                        formatted = await asyncio.get_event_loop().run_in_executor(exe, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
+                        formatted = await asyncio.get_event_loop().run_in_executor(None, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
                     print(f"Done formatting results for task {self.current_task}")
                     for i in formatted:
                         yield i
             if shell_id:
-                conn.close_shell(shell_id)
+                await asyncio.get_running_loop().run_in_executor(None, functools.partial(conn.close_shell, shell_id=shell_id))
     
     def __insert_into_db(self, value: str, handler: DBHandler, collection):
         print(f"Inserting into collection {collection}")

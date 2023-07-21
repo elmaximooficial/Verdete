@@ -61,8 +61,11 @@ async def execute_command (host : Host, user : User, command : str, transport : 
                 functools.partial(__encode_command, command=command))
             print(f"Done encoding command {host.hostname}")
             print(f"Executing command {host.hostname}")
-            command_id = await loop.run_in_executor(exe,
+            try:
+                command_id = await loop.run_in_executor(exe,
                                                     functools.partial(conn.run_command, shell_id=shell_id, command='powershell -encodedcommand {0}'.format(encoded)))
+            except ConnectionError:
+                return (None, None, None, "Connection Error")
             print(f"Done Executing command {host.hostname}")
             try:
                 print(f"Parsing Results {host.hostname}")

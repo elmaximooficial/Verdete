@@ -49,6 +49,7 @@ class TaskGroup:
 
     async def _execute_task(self, user: User, host: Host) -> dict:
         success = False
+        conn, shell_id = None
         try:
             success, conn, shell_id = await create_connection(host=host, user=user, transport=self.transport)
         except WinRMError:

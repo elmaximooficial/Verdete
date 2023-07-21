@@ -33,6 +33,7 @@ async def create_connection(host: Host, user: User, transport: WINRM_TRANSPORT) 
             operation_timeout_sec=30,
             read_timeout_sec=45
         )
+        shell = None
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
             shell = await asyncio.get_running_loop().run_in_executor(exe, conn.open_shell)
         return (True, conn, shell)

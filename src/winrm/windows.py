@@ -68,6 +68,8 @@ async def execute_command (host : Host, user : User, command : str, transport : 
                 return (None, None, None, "Connection Error")
             except ReadTimeout:
                 return(None, None, None, "Read Timeout")
+            except WinRMTransportError:
+                return(None, None, None, "Bad HTTP Reponse")
             print(f"Done Executing command {host.hostname}")
             try:
                 print(f"Parsing Results {host.hostname}")

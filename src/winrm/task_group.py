@@ -81,13 +81,13 @@ class TaskGroup:
                         yield i
             conn.close_shell(shell_id)
     
-    async def __insert_into_db(self, value: str, handler: DBHandler, collection):
+    def __insert_into_db(self, value: str, handler: DBHandler, collection):
         print(f"Inserting into collection")
         if collection == "Failure":
-                await handler.insert(collection, json.loads(value))
+            handler.insert(collection, json.loads(value))
         if handler.is_connected:
-            await handler.upsert(collection, json.loads(value))
-            await handler.upsert("Hosts", {"Hostname": json.loads(value)["Hostname"],
+            handler.upsert(collection, json.loads(value))
+            handler.upsert("Hosts", {"Hostname": json.loads(value)["Hostname"],
                                      "Status": json.loads(value)["Status"],
                                      "Last Communication": datetime.now().isoformat()
                                      })
@@ -105,7 +105,7 @@ class TaskGroup:
                 if debug:
                     print(i)
                 else:
-                    await self.__insert_into_db(i,
+                    self.__insert_into_db(i,
                                                 db_handler,
                                                 self.current_task if json.loads(i)["Status"] != "Failure" else "Failure"
                                                 )
@@ -115,6 +115,6 @@ class TaskGroup:
                     if debug:
                         print(j)
                     else:
-                        await self.__insert_into_db(j,
+                        self.__insert_into_db(j,
                                                     db_handler,
                                                     self.current_task if json.loads(i)["Status"] != "Failure" else "Failure")

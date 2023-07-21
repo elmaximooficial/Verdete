@@ -49,19 +49,19 @@ class DBHandler:
         if not collection:
             raise ValueError("Collection must not be null")
         else:
-            self.__connection = AsyncIOMotorClient(f"mongodb://{self.__user}:{self.__password}@{self.__server}:{self.__port}")
+            self.__connection = MongoClient(f"mongodb://{self.__user}:{self.__password}@{self.__server}:{self.__port}")
             database = self.__connection.verdete
             collection = database.get_collection(collection)
             self.is_connected = True
             return collection
     
-    async def insert(self, collection, value : dict):
+    def insert(self, collection, value : dict):
         collection = self.__connection.verdete.get_collection(collection)
-        await collection.insert_one(value)
+        collection.insert_one(value)
     
-    async def upsert(self, collection, value : dict):
+    def upsert(self, collection, value : dict):
         collection = self.__connection.verdete.get_collection(collection)
-        await collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
+        collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
     
     def close(self):
         self.__connection.close()

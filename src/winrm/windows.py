@@ -53,14 +53,14 @@ def __encode_command(command):
 
 async def execute_command (host : Host, user : User, command : str, transport : WINRM_TRANSPORT, conn : Protocol, shell_id : str) -> tuple:
     try:
-        print(f"Encoding command {host.hostname}")
+        print(f"Encoding command {command} for {host.hostname}")
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
             encoded = await loop.run_in_executor(
                 exe,
                 functools.partial(__encode_command, command=command))
-            print(f"Done encoding command {host.hostname}")
-            print(f"Executing command {host.hostname}")
+            print(f"Done encoding command {command} for {host.hostname}")
+            print(f"Executing command {command} for {host.hostname}")
             try:
                 command_id = await loop.run_in_executor(exe,
                                                     functools.partial(conn.run_command, shell_id=shell_id, command='powershell -encodedcommand {0}'.format(encoded)))
@@ -70,14 +70,14 @@ async def execute_command (host : Host, user : User, command : str, transport : 
                 return(None, None, None, "Read Timeout")
             except WinRMTransportError:
                 return(None, None, None, "Bad HTTP Reponse")
-            print(f"Done Executing command {host.hostname}")
+            print(f"Done Executing command {command} for {host.hostname}")
             try:
                 print(f"Parsing Results {host.hostname}")
                 cmd_output = await loop.run_in_executor(exe, functools.partial(conn.get_command_output, shell_id=shell_id, command_id=command_id))
                 rs = await loop.run_in_executor(exe, functools.partial(Response, args=cmd_output))
                 print(f"Done parsing results {host.hostname}")
-            except ReadTimeout:
-                return (command_id, None, None, "Read Timeout")
+            except:
+                return (command_id, None, None, "Exception Parsing Results")
             print(f"Decoding results for {host.hostname}")
             out = rs.std_out.decode('cp860')
             err = rs.std_out.decode('cp860').strip()

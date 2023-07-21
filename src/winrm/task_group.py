@@ -55,12 +55,12 @@ class TaskGroup:
             success, conn, shell_id = await create_connection(host=host, user=user, transport=self.transport)
         except WinRMError:
             yield json.dumps({"Hostname": host.hostname, "Status": "Failure", "Timestamp": datetime.now().isoformat(), "Error": "Max Connections Exceeded"}, indent=2)
-        if not success:
+        if not success or not conn or not shell_id:
             print("Formatting Error in JSON")
             yield json.dumps({"Hostname": host.hostname,
                               "Status": "Failure",
                               "Timestamp": datetime.now().isoformat(),
-                              "Error": shell_id},
+                              "Error": shell_id if shell_id else "Connection Returned null"},
                              indent=2)
         else:
             for i in self.tasks:
@@ -75,18 +75,19 @@ class TaskGroup:
                     try:
                         conn.cleanup_command(shell_id, command_id)
                     except:
-                        print("Exeception cleaning command up")
+                        print("Exeception cleaning command")
                 if status != 0 or len(stdout) < 5:
                     yield json.dumps(self._format_error(host.hostname, stderr))
                 else:
-                    print(f"Formatting results in JSON for task {self.current_task}")
+                    print(f"Formatting results in JSON for task {self.current_task} related to host {host.hostname}")
                     formatted = None
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
                         formatted = await asyncio.get_event_loop().run_in_executor(exe, functools.partial(self._format, stdout=stdout, hostname=host.hostname))
                     print(f"Done formatting results for task {self.current_task}")
                     for i in formatted:
                         yield i
-            conn.close_shell(shell_id)
+            if shell_id:
+                conn.close_shell(shell_id)
     
     def __insert_into_db(self, value: str, handler: DBHandler, collection):
         print(f"Inserting into collection {collection}")

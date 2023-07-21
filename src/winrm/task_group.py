@@ -107,7 +107,7 @@ class TaskGroup:
                 else:
                     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
                         await asyncio.get_running_loop().run_in_executor(exe, functools.partial(self.__insert_into_db, value=i,
-                                                    db_handler=db_handler,
+                                                    handler=db_handler,
                                                     collection=self.current_task if json.loads(i)["Status"] != "Failure" else "Failure"
                                                     ))
         if group:

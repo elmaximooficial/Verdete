@@ -14,7 +14,6 @@ from datetime import datetime
 class TaskGroup:
     tasks: list
     transport: WINRM_TRANSPORT
-    current_task: str
     
     def __init__(self, *args, transport):
         self.tasks = []

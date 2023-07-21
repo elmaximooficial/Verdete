@@ -32,7 +32,7 @@ import time
 
 class Main:
     async def main(self, argv):
-        opts, args = getopt.getopt(argv, '', ['fetch-computers', 'gen-password=', 'gen-key', 'query-computers', 'test'])
+        opts, args = getopt.getopt(argv, '', ['fetch-computers', 'gen-password=', 'gen-key', 'query-computers', 'debug'])
         for i, arg in opts:
             if i in ['--gen-password']:
                 pass_manager = PasswordManager.load_key()
@@ -70,7 +70,7 @@ class Main:
                     computers.hosts.append(Host(j))
                 async with asyncio.TaskGroup() as tg:
                     async for i in computers:
-                        task = tg.create_task(task_group.execute(host=i, user=user, db_handler=db_handler, debug=False))
+                        task = tg.create_task(task_group.execute(host=i, user=user, db_handler=db_handler, debug=True if i in ['debug'] else False))
 if __name__ == '__main__':
     main = Main()
     asyncio.run(main.main(sys.argv[1:]), debug=False)

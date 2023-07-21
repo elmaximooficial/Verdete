@@ -33,6 +33,7 @@ async def create_connection(host: Host, user: User, transport: WINRM_TRANSPORT) 
             operation_timeout_sec=30,
             read_timeout_sec=360
         )
+        # TODO: Find out why this returns null sometimes
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
             shell = await asyncio.get_running_loop().run_in_executor(exe, conn.open_shell)
         print(shell)

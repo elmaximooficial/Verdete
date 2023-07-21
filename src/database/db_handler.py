@@ -59,9 +59,9 @@ class DBHandler:
         collection = self.__connection.verdete.get_collection(collection)
         collection.insert_one(value)
     
-    def upsert(self, collection, value : dict):
+    def upsert(self, collection, value: dict):
         collection = self.__connection.verdete.get_collection(collection)
-        collection.replace_one({"Hostname" : value["Hostname"]}, value, upsert=True)
+        collection.update_one({"Hostname": value["Hostname"]}, {"$set": {value["Task Name"]: value}}, upsert=True)
     
     def close(self):
         self.__connection.close()

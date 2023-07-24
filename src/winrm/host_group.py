@@ -1,3 +1,4 @@
+import concurrent.futures
 from asyncio import Queue
 from src.winrm.windows import WinRMConnection, WINRM_TRANSPORT, WINRM_PROTOCOL
 from src.util.password_manager import User
@@ -34,15 +35,16 @@ class HostGroup:
         async with asyncio.TaskGroup() as tg:
             for i in self.hosts:
                 conn = WinRMConnection(endpoint=f"{i.protocol}://{i.hostname}:{i.port}/wsman",
-                                                           transport=i.transport,
-                                                           username=self.user.username,
-                                                           password=self.user.password,
-                                                           server_cert_validation='ignore')
+                                       transport=i.transport,
+                                       username=self.user.username,
+                                       password=self.user.password,
+                                       server_cert_validation='ignore',
+                                       operation_timeout_sec=15,
+                                       read_timeout_sec=30)
                 tg.create_task(conn.connect())
-                print(threading.active_count())
                 await self.connections.put(conn)
                 print(f"Connected to {conn.transport.endpoint}")
-            return self
+        return self
 
     async def get(self):
         return await self.connections.get()

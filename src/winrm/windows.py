@@ -48,7 +48,7 @@ class WinRMConnection(Protocol):
 
     async def connect(self):
         try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
                 self.shell_id = await asyncio.get_running_loop().run_in_executor(exe, self.open_shell)
                 self.hostname = self.transport.endpoint
         except ConnectionError:

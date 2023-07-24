@@ -30,12 +30,14 @@ class WinRMTaskGroup:
                 while True:
                     print("Popping connection from queue")
                     connection = tg.create_task(gp.get())
-
+                    print("Got connection from pool")
                     if connection is None:
                         break
                     for task_name, encoded in self.tasks.items():
+                        print("Executing task and parsing the response")
                         response = Response(tg.create_task(connection.execute_ps(encoded)))
 
+                        print("Cheking for Errors")
                         if response.status_code != 0:
                             self.result_skeleton["Hostname"] = connection.transport.endpoint
                             print(self.result_skeleton | {"Status": "Failure",

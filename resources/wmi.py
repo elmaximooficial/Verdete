@@ -1,6 +1,7 @@
 import src.winrm.windows
 from src.winrm.task import Task, FAILURE_ACTION, WINRM_TRANSPORT
 from src.winrm.task_group import TaskGroup
+import os
 
 wmi_check = lambda x: x != None
 
@@ -39,7 +40,7 @@ computer_task = Task(name="Computer",
                      transport=WINRM_TRANSPORT.NTLM
                      )
 physical_memory_task = Task(name="PhysicalMemory",
-                            script='Get-WmiObject Win32_PhysicalMemory | Select Capacity, Caption, ConfiguredClockSpeed, ConfiguredVoltage, DataWidth, Description, DeviceLocator, FormFactor, Manufacturer, PartNumber, SerialNumber, Speed | ConvertTo-Csv',
+                        script='Get-WmiObject Win32_PhysicalMemory | Select Capacity, Caption, ConfiguredClockSpeed, ConfiguredVoltage, DataWidth, Description, DeviceLocator, FormFactor, Manufacturer, PartNumber, SerialNumber, Speed | ConvertTo-Csv',
                             script_checking=wmi_check,
                             script_failure_action=FAILURE_ACTION.STOP_EXECUTION,
                             transport=WINRM_TRANSPORT.NTLM)
@@ -106,7 +107,30 @@ share_task = Task(name="Share",
                   script_failure_action=FAILURE_ACTION.STOP_EXECUTION,
                   transport=WINRM_TRANSPORT.NTLM
                   )
-
+absolute = os.path.dirname(__file__)
+relative = os.path.join(absolute, './anydesk.bat')
+with open(relative, 'r') as file:
+    anydesk_task = Task(name="Anydesk",
+                        script=file.read(),
+                        script_checking=wmi_check,
+                        script_failure_action=FAILURE_ACTION.STOP_EXECUTION,
+                        transport=WINRM_TRANSPORT.NTLM)
+                        
 task_group = TaskGroup(
+    anydesk_task,
     cpu_task,
+    os_task,
+    computer_task,
+    net_task,
+    bios_task,
+    printer_task,
+    share_task,
+    service_task,
+    product_task,
+    desktop_monitor_task,
+    video_controller_task,
+    disk_drive_task,
+    physical_memory_task,
+    base_board_task,
+
     transport=WINRM_TRANSPORT.NTLM)

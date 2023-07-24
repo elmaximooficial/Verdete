@@ -21,22 +21,23 @@ class TaskGroup:
         self.tasks.extend(iter(args))
 
     def _format_error(self, hostname: str, error_message: str) -> dict:
-        return {"Hostname": hostname,
+        return json.dumps({"Hostname": hostname,
                 "Status": "Failure",
                 "Timestamp": datetime.now().isoformat(),
                 "Error Message": error_message
-                }
+                })
 
     def _format(self, stdout: str, hostname: str, task_name: str):
+        print("Formatting STDOUT")
         skeleton = {"Hostname": hostname,
                     "Status": "Success",
                     "Timestamp": datetime.now().isoformat(),
                     "Task Name": task_name}
+        print("Created Skeleton")
         reader = csv.DictReader(stdout.split('\n')[1:])
-        if len(reader) == 1:
-            yield json.dumps(skeleton | reader)
-        else:
-            yield json.dumps(skeleton | {"Results": [row for row in reader]})
+        print("Read CSV")
+        yield json.dumps(skeleton | {"Results": [row for row in reader]})
+        print("Done Formatting STDOUT")
 
     async def _execute_task(self, user: User, host: Host) -> dict:
         success, conn, shell_id = await create_connection(host=host, user=user, transport=self.transport)
@@ -63,11 +64,13 @@ class TaskGroup:
                     except:
                         print("Exeception cleaning command")
                 if status != 0 or len(stdout) < 5:
-                    yield json.dumps(self._format_error(host.hostname, stderr))
+                    yield self._format_error(host.hostname, stderr)
                 else:
                     print(f"Formatting results in JSON for task {i.name} related to host {host.hostname}")
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
-                        yield await asyncio.get_event_loop().run_in_executor(None, functools.partial(self._format, task_name=i.name, stdout=stdout, hostname=host.hostname))
+                        formatted = await asyncio.get_event_loop().run_in_executor(None, functools.partial(self._format, task_name=i.name, stdout=stdout, hostname=host.hostname))
+                        for j in formatted:
+                            yield j
                     print(f"Done formatting results for task {i.name}")
             if shell_id:
                 await asyncio.get_running_loop().run_in_executor(None, functools.partial(conn.close_shell, shell_id=shell_id))

@@ -60,7 +60,6 @@ class DBHandler:
         collection.insert_one(value)
     
     def upsert(self, collection, value: dict):
-        print(value)
         collection = self.__connection.verdete.get_collection(collection)
         collection.update_one({"Hostname": value["Hostname"]}, {"$set": {value["Task Name"]: value}}, upsert=True)
                               #{"$set": {value["Task Name"]: value}}, upsert=True)

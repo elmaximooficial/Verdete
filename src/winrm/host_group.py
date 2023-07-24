@@ -3,6 +3,7 @@ from src.winrm.windows import WinRMConnection, WINRM_TRANSPORT, WINRM_PROTOCOL
 from src.util.password_manager import User
 from collections import namedtuple
 import asyncio
+import threading
 
 
 Host = namedtuple(typename="Host",
@@ -38,7 +39,9 @@ class HostGroup:
                                                            password=self.user.password,
                                                            server_cert_validation='ignore')
                 tg.create_task(conn.connect())
+                print(threading.active_count())
                 await self.connections.put(conn)
+                print(f"Connected to {conn.transport.endpoint}")
             return self
 
     async def get(self):
@@ -49,5 +52,7 @@ class HostGroup:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if not self.connections.empty():
-            for i in self.connections:
-                await i.dispose()
+            while True:
+                conn = await self.connections.get()
+                if conn is None:
+                    break

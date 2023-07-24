@@ -5,7 +5,6 @@ ldap3
 krb5
 gssapi
 toml
-surrealdb
 pandas
 pyarrow
 requests

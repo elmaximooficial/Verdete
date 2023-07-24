@@ -1,3 +1,5 @@
+import concurrent.futures
+
 from winrm.protocol import Protocol
 from winrm import Response
 from enum import StrEnum
@@ -46,14 +48,17 @@ class WinRMConnection(Protocol):
 
     async def connect(self):
         try:
-            self.shell_id = await asyncio.get_running_loop().run_in_executor(None, self.open_shell)
-            self.hostname = self.transport.endpoint
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exe:
+                self.shell_id = await asyncio.get_running_loop().run_in_executor(exe, self.open_shell)
+                self.hostname = self.transport.endpoint
         except ConnectionError:
             print(f"Could not connect to {self.transport.endpoint}")
         except InvalidURL:
             print(f"Invalid URL {self.transport.endpoint}")
         except InvalidCredentialsError:
             print(f"Invalid Credentials for host {self.transport.endpoint}")
+        except WinRMError as e:
+            print(f"WinRM Error {e}")
 
     async def dispose(self):
         await asyncio.get_running_loop().run_in_executor(None, functools.partial(self.close_shell, shell_id=self.shell_id))

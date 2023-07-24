@@ -13,6 +13,10 @@ WinRMTask = namedtuple("WinRMTask", ["name", "script"])
 
 class WinRMTaskGroup:
     tasks: dict
+    result_skeleton: dict = {
+                        "Hostname": None,
+                        "Timestamp": datetime.now().isoformat(),
+                    }
     
     def __init__(self, *args):
         self.tasks = {task.name: WinRMConnection.encode_command(task.script) for task in args}
@@ -29,24 +33,20 @@ class WinRMTaskGroup:
 
                     if connection is None:
                         break
-
-                    skeleton = {
-                        "Hostname": connection.hostname,
-                        "Timestamp": datetime.now().isoformat(),
-                    }
                     for task_name, encoded in self.tasks.items():
                         response = Response(tg.create_task(connection.execute_ps(encoded)))
 
                         if response.status_code != 0:
-                            print(skeleton | {"Status": "Failure",
+                            self.result_skeleton["Hostname"] = connection.transport.endpoint
+                            print(self.result_skeleton | {"Status": "Failure",
                                               "Task Name": task_name,
                                               "Error Code": response.std_err})
                         if debug:
-                            print(skeleton | {"Status": "OK",
+                            print(self.result_skeleton | {"Status": "OK",
                                               "Task Name": task_name,
                                               "Results": tf.csv_to_dict(response.std_out)})
                         else:
-                            print(skeleton | {"Status": "OK",
+                            print(self.result_skeleton | {"Status": "OK",
                                               "Task Name": task_name,
                                               "Results": tf.csv_to_dict(response.std_out)})
                             #await db_handler.upsert(collection='hosts', mode='csv',

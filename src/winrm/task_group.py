@@ -25,7 +25,7 @@ class WinRMTaskGroup:
             async with group as gp:
                 while True:
                     print("Popping connection from queue")
-                    connection = await gp.get()
+                    connection = tg.create_task(gp.get())
 
                     if connection is None:
                         break
@@ -35,7 +35,7 @@ class WinRMTaskGroup:
                         "Timestamp": datetime.now().isoformat(),
                     }
                     for task_name, encoded in self.tasks.items():
-                        response = Response(await connection.execute_ps(encoded))
+                        response = Response(tg.create_task(connection.execute_ps(encoded)))
 
                         if response.status_code != 0:
                             print(skeleton | {"Status": "Failure",

@@ -5,5 +5,7 @@ ldap3
 krb5
 gssapi
 toml
-pymongo
-motor
+surrealdb
+pandas
+pyarrow
+requests

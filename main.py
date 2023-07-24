@@ -1,19 +1,12 @@
+from src.util.ldap import LDAP
+from src.util.password_manager import PasswordManager, User
+from src.util.timer import Timer
+from src.winrm.host_group import HostGroup, Host
+from src.winrm.task_group import WinRMTaskGroup, WinRMTask
+from getpass import getpass
+from threading import Thread
 import asyncio
 import sys, getopt
-from src.winrm.windows import WINRM_TRANSPORT
-from src.util.ldap import LDAP
-from src.winrm.task import Task, FAILURE_ACTION
-from src.winrm.task_group import TaskGroup
-from src.winrm.host import Host
-from src.util.password_manager import PasswordManager, User
-from src.winrm.host_group import HostGroup
-from src.database.db_handler import DBHandler
-from getpass import getpass
-import json
-from resources.wmi import task_group
-from multiprocessing import Process
-from random import Random
-import time
 
 ########## Configuration file format ##########
 #### [ldap]                              
@@ -30,8 +23,13 @@ import time
 #### password = password
 #### database = database
 
+
 class Main:
     async def main(self, argv):
+        timer = Timer()
+        timer_thread = Thread(name="Timer", target=timer.start, daemon=True)
+        timer_thread.start()
+
         opts, args = getopt.getopt(argv, '', ['fetch-computers', 'gen-password=', 'gen-key', 'query-computers', 'debug'])
         for i, arg in opts:
             if i in ['--gen-password']:
@@ -54,23 +52,15 @@ class Main:
                 password = getpass('Insert the Password: ')
                 
                 user = User(username, password)
+                all = HostGroup(name="All", description="All Hosts from LDAP", user=user)
+                async for i in ldap_conn.fetch_computers():
+                    all.add_host(Host(hostname=i))
 
-                wmi_check = lambda x: x != None
-                availability_task = Task(name="Availability",
-                                         script='hostname',
-                                         script_checking=wmi_check,
-                                         script_failure_action=FAILURE_ACTION.STOP_EXECUTION,
-                                         transport=WINRM_TRANSPORT.NTLM)
-                available = HostGroup(name="Available", description="All Available Hosts")
-                avail_tg = TaskGroup(availability_task, transport=WINRM_TRANSPORT.NTLM)
-                db_handler = DBHandler()
-                db_handler.connect('Hosts')
-                computers = HostGroup(name="All", description="All Computers")
-                async for j in ldap_conn.fetch_computers():
-                    computers.hosts.append(Host(j))
-                async with asyncio.TaskGroup() as tg:
-                    async for j in computers:
-                           task = tg.create_task(task_group.execute(host=j, user=user, db_handler=db_handler, debug=False))
+                task_group = WinRMTaskGroup(WinRMTask("CPU", "Get-WMIObject Win32_Processor | "
+                                                             "Select name, manufacturer, description | "
+                                                             "ConvertTo-Csv"))
+                await task_group.execute(group=all, debug=True)
+
 if __name__ == '__main__':
     main = Main()
     asyncio.run(main.main(sys.argv[1:]), debug=False)

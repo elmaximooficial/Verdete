@@ -8,3 +8,4 @@ toml
 pandas
 pyarrow
 requests
+motor

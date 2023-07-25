@@ -52,7 +52,7 @@ class Main:
                 password = getpass('Insert the Password: ')
                 
                 user = User(username, password)
-                all = HostGroup(name="All", description="All Hosts from LDAP", user=user)
+                all = HostGroup([i for i in ldap_conn.fetch_computers()], name="All", description="All Hosts from LDAP", user=user)
                 async for i in ldap_conn.fetch_computers():
                     all.add_host(Host(hostname=i))
 

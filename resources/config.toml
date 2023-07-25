@@ -6,5 +6,6 @@ use_ssl = false
 user = 'Administrador'
 [mongodb]
 server = '10.250.240.8'
+port=27017
 user = 'cpd'
 password = '123456'

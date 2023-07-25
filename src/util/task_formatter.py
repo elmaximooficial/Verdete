@@ -1,4 +1,6 @@
 import asyncio
+import concurrent.futures
+
 from pandas import read_table, read_json, read_xml
 from io import StringIO
 from functools import partial
@@ -15,7 +17,8 @@ class TaskFormatter:
                                                  filepath_or_buffer=file if file else StringIO(data),
                                                  delimiter=',',
                                                  engine='pyarrow'))
-        return await asyncio.to_thread(partial(parsed.to_dict, orient='records'))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exe:
+            return await asyncio.get_running_loop().run_in_executor(exe, partial(parsed.to_dict, orient='records'))
 
     @staticmethod
     async def json_to_dict(data: str = None, file: str = None):

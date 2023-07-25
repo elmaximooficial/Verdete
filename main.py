@@ -1,6 +1,6 @@
-from src.util.ldap import LDAP
+from src.injector.ldap_injector import LDAPInjector
 from src.util.password_manager import PasswordManager, User
-from src.util.timer import Timer
+from src.trigger.timer_trigger import TimerTrigger
 from src.winrm.host_group import HostGroup, Host
 from src.winrm.task_group import WinRMTaskGroup, WinRMTask
 from getpass import getpass
@@ -26,7 +26,7 @@ import sys, getopt
 
 class Main:
     async def main(self, argv):
-        timer = Timer()
+        timer = TimerTrigger()
         timer_thread = Thread(name="Timer", target=timer.start, daemon=True)
         timer_thread.start()
 
@@ -39,13 +39,13 @@ class Main:
             if i in ['--gen-key']:
                 PasswordManager.gen_key()
             if i in ['--fetch-computers']:
-                ldap_conn = LDAP()
+                ldap_conn = LDAPInjector()
                 await ldap_conn.connect_to_server()
                 async for i in ldap_conn.fetch_computers():
                     print(i)
                 await ldap_conn.dispose_connection()
             if i in ['--query-computers']:
-                ldap_conn = LDAP()
+                ldap_conn = LDAPInjector()
                 await ldap_conn.connect_to_server()
                 
                 username = input('Insert the Username: ')

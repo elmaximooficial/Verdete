@@ -1,4 +1,4 @@
-class Timer:
+class TimerTrigger:
     def __init__(self):
         pass
 

@@ -23,24 +23,18 @@ class HostGroup:
     @staticmethod
     async def fetch_hostgroup(hosts: list, name: str, description: str, user: User):
         host_group = HostGroup(name=name)
-        host_group.__init__(name=name)
         await host_group.__from_db(hosts, name=name, description=description, user=user)
         return host_group
 
     def __init__(self, name: str):
-        print("Calling Init on Host Group")
         self.name = name
         self.__index = 0
         self.__hosts = []
 
     async def __from_db(self, hosts: list, name, description, user):
-        print("Calling from DB in Host Group")
         async with MongoDBHandler() as handler:
-            print("Trying to get the document from the collection")
             database_host_group = await handler.find_one('host_groups', {"name": self.name})
-            print("Query terminated")
             if not database_host_group:
-                print("Calling Create New")
                 await self.__create_new(hosts, name, description, user)
                 return
             self.description = database_host_group['description']
@@ -50,12 +44,10 @@ class HostGroup:
             self.__hosts = database_host_group['hostnames']
 
     async def __create_new(self, hosts: list, name: str, description: str, user: User):
-        print("Create New")
         self.__hosts.extend(hosts)
         self.name = name
         self.description = description,
         self.user = user
-        print("Inserting new into DB")
         async with MongoDBHandler() as handler:
             await handler.insert("host_groups", {"name": self.name,
                                                  "description": self.description,

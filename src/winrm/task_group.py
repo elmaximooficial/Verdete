@@ -13,16 +13,36 @@ WinRMTask = namedtuple("WinRMTask", ["name", "script"])
 
 
 class WinRMTaskGroup:
-    tasks: dict
+    tasks: list
     result_skeleton: dict = {
                         "Hostname": None,
                         "Timestamp": datetime.now().isoformat(),
                     }
     debug: bool
     success: dict = []
-    
-    def __init__(self, *args):
-        self.tasks = {task.name: WinRMConnection.encode_command(task.script) for task in args}
+
+    @staticmethod
+    async def fetch_task(tasks: list, **kwargs):
+        task = WinRMTaskGroup(tasks=tasks, name=kwargs.get('name'))
+        await task.__from_db()
+        return task
+
+    async def __from_db(self):
+        async with MongoDBHandler() as handler:
+            database_task_group = await handler.find_one("winrm_task_group", {"name": self.name})
+            if database_task_group is None:
+                await self.__create_new()
+                return
+            self.tasks = database_task_group['tasks']
+
+    async def __create_new(self):
+        async with MongoDBHandler() as handler:
+            await handler.insert(collection='winrm_task_group', data=[{"name": self.name, "tasks": self.tasks}])
+
+    def __init__(self, name: str, tasks: list = None):
+        self.name = name
+        self.tasks = []
+        self.tasks.append({task.name: WinRMConnection.encode_command(task.script) for task in tasks})
 
     async def __execute_task(self, endpoint, user, db_handler = None):
         connection = WinRMConnection(endpoint=f"{endpoint['protocol']}://{endpoint['hostname']}:{endpoint['port']}/wsman",
@@ -34,31 +54,32 @@ class WinRMTaskGroup:
         await connection.connect()
         if connection.shell_id is not None:
             print("Entering TaskGroup loop")
-            for task_name, encoded in self.tasks.items():
-                print("Executing task")
-                res = await connection.execute_ps(encoded=encoded)
-                print("Parsing Response")
-                response = None if res is None else Response(res)
-                print("Cheking for Errors")
-                if response is None or response.status_code != 0:
-                    self.result_skeleton["Hostname"] = connection.transport.endpoint
-                    print(self.result_skeleton | {"Status": "Failure",
-                                                  "Task Name": task_name,
-                                                  "Error Code": "No response" if not response else response.std_err})
-                    continue
-                if self.debug:
-                    print(self.result_skeleton | {"Status": "OK",
-                                                  "Task Name": task_name,
-                                                  "Results": await tf.csv_to_dict(response.std_out)})
-                    self.success.append(connection.hostname)
-                    continue
-                else:
-                    await db_handler.insert(collection='winrm_hosts', mode='csv',
-                                            data=[self.result_skeleton | {"Status": "OK",
-                                                        "Task Name": task_name,
-                                                       "Results": await tf.csv_to_dict(response.std_out)}])
-                    self.success.append(connection.hostname)
-                    continue
+            for i in self.tasks:
+                for task_name, encoded in i.items():
+                    print("Executing task")
+                    res = await connection.execute_ps(encoded=encoded)
+                    print("Parsing Response")
+                    response = None if res is None else Response(res)
+                    print("Cheking for Errors")
+                    if response is None or response.status_code != 0:
+                        self.result_skeleton["Hostname"] = connection.transport.endpoint
+                        print(self.result_skeleton | {"Status": "Failure",
+                                                      "Task Name": task_name,
+                                                      "Error Code": "No response" if not response else response.std_err})
+                        continue
+                    if self.debug:
+                        print(self.result_skeleton | {"Status": "OK",
+                                                      "Task Name": task_name,
+                                                      "Results": await tf.csv_to_dict(response.std_out)})
+                        self.success.append(connection.hostname)
+                        continue
+                    else:
+                        await db_handler.insert(collection='winrm_hosts', mode='csv',
+                                                data=[self.result_skeleton | {"Status": "OK",
+                                                            "Task Name": task_name,
+                                                           "Results": await tf.csv_to_dict(response.std_out)}])
+                        self.success.append(connection.hostname)
+                        continue
             await connection.dispose()
     async def execute(self,
                       group: HostGroup = None,

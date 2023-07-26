@@ -43,7 +43,7 @@ class WinRMTaskGroup:
 
     async def __create_new(self):
         async with MongoDBHandler() as handler:
-            await handler.insert(collection='winrm_task_group', data=[{"name": self.name, "tasks": self.tasks}])
+            await handler.insert(collection='winrm_task_group', data={"name": self.name, "tasks": self.tasks})
 
     def __init__(self, name: str):
         self.name = name

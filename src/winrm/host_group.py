@@ -112,11 +112,11 @@ class HostGroup:
         :return:
         """
         async with MongoDBHandler() as handler:
-            await handler.insert("winrm_host_groups", [{"name": self.name,
+            await handler.insert("winrm_host_groups", {"name": self.name,
                                                  "description": self.description,
                                                  "username": self.user.username,
                                                  "password": self.user.password,
-                                                 "hostnames": [i._asdict() for i in self.__hosts]}])
+                                                 "hostnames": [i._asdict() for i in self.__hosts]})
 
     def __aiter__(self):
         return self

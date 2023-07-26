@@ -1,4 +1,4 @@
-from src.winrm.host_group import HostGroup
+from src.winrm.host_group import HostGroup, TempHostGroup
 from src.winrm.windows import WinRMConnection
 from src.database.db_handler import MongoDBHandler
 from src.util.task_formatter import TaskFormatter as tf
@@ -22,16 +22,22 @@ class WinRMTaskGroup:
     success: dict = []
 
     @staticmethod
-    async def fetch_task(tasks: list, **kwargs):
-        task = WinRMTaskGroup(tasks=tasks, name=kwargs.get('name'))
+    async def fetch_task(name):
+        task = WinRMTaskGroup(name=name)
         await task.__from_db()
         return task
+
+    @staticmethod
+    async def create_task(tasks: list, name: str):
+        task = WinRMTaskGroup(name=name)
+        task.tasks = tasks
+        task.__create_new()
 
     async def __from_db(self):
         async with MongoDBHandler() as handler:
             database_task_group = await handler.find_one("winrm_task_group", {"name": self.name})
             if database_task_group is None:
-                await self.__create_new()
+                print(f"Task Group {self.name} cannot be found on the database")
                 return
             self.tasks = database_task_group['tasks']
 
@@ -39,10 +45,9 @@ class WinRMTaskGroup:
         async with MongoDBHandler() as handler:
             await handler.insert(collection='winrm_task_group', data=[{"name": self.name, "tasks": self.tasks}])
 
-    def __init__(self, name: str, tasks: list = None):
+    def __init__(self, name: str):
         self.name = name
         self.tasks = []
-        self.tasks.append({task.name: WinRMConnection.encode_command(task.script) for task in tasks})
 
     async def __execute_task(self, endpoint, user, db_handler = None):
         connection = WinRMConnection(endpoint=f"{endpoint['protocol']}://{endpoint['hostname']}:{endpoint['port']}/wsman",
@@ -68,12 +73,14 @@ class WinRMTaskGroup:
                                                       "Error Code": "No response" if not response else response.std_err})
                         continue
                     if self.debug:
+                        self.result_skeleton["Hostname"] = connection.transport.endpoint
                         print(self.result_skeleton | {"Status": "OK",
                                                       "Task Name": task_name,
                                                       "Results": await tf.csv_to_dict(response.std_out)})
                         self.success.append(connection.hostname)
                         continue
                     else:
+                        self.result_skeleton["Hostname"] = connection.transport.endpoint
                         await db_handler.insert(collection='winrm_hosts', mode='csv',
                                                 data=[self.result_skeleton | {"Status": "OK",
                                                             "Task Name": task_name,
@@ -81,10 +88,10 @@ class WinRMTaskGroup:
                         self.success.append(connection.hostname)
                         continue
             await connection.dispose()
+
     async def execute(self,
-                      group: HostGroup = None,
+                      group: (HostGroup | TempHostGroup),
                       debug: bool = False):
-                      #db_handler: SurrealDBHandler = None):
         self.debug = debug
         print("Created Asyncio TaskGroup")
         async with asyncio.TaskGroup() as tg:
@@ -92,7 +99,7 @@ class WinRMTaskGroup:
             async with MongoDBHandler() as handler:
                 async for i in group:
                     tg.create_task(self.__execute_task(endpoint=i, user=group.user, db_handler=handler))
-        print(f"Success: {len(self.success)} Failure: {group.size() - len(self.success)}")
+        print(f"Success: {len(self.success)} Failure: {group.size - len(self.success)}")
 
 
 

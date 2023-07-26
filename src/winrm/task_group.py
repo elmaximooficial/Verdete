@@ -13,6 +13,10 @@ WinRMTask = namedtuple("WinRMTask", ["name", "script"])
 
 
 class WinRMTaskGroup:
+    """
+    This object represents a WinRM Task Group, which executes every task in 'tasks' in every connection of the group
+    passed to execute(), without closing the shell in between commands
+    """
     tasks: list
     result_skeleton: dict = {
                         "Hostname": None,
@@ -23,12 +27,23 @@ class WinRMTaskGroup:
 
     @staticmethod
     async def fetch_task(name):
+        """
+        Loads task group from the database
+        :param name: The name of the task group to load
+        :return: The task group initialized with the attributes stored in the database
+        """
         task = WinRMTaskGroup(name=name)
         await task.__from_db()
         return task
 
     @staticmethod
     async def create_task(tasks: list, name: str):
+        """
+        Creates a new task group and stores into the database
+        :param tasks: The list of tasks to be executed
+        :param name: The name of the task group, should be unique
+        :return:
+        """
         task = WinRMTaskGroup(name=name)
         task.tasks = tasks
         task.__create_new()
@@ -46,6 +61,7 @@ class WinRMTaskGroup:
             await handler.insert(collection='winrm_task_group', data={"name": self.name, "tasks": self.tasks})
 
     def __init__(self, name: str):
+        """ This should not be called directly, use create_task() or fetch_task instead()"""
         self.name = name
         self.tasks = []
 
@@ -92,6 +108,15 @@ class WinRMTaskGroup:
     async def execute(self,
                       group: (HostGroup | TempHostGroup),
                       debug: bool = False):
+        """
+        Executes the task group on the 'group' paramater.
+        There are two options for group, the HostGroup which is a full on HostGroup stored in the database, and the
+        TempHostGroup, which is a more flexible type of HostGroup, stored in memory for how long as this task exists.
+        Can be useful when executing a TaskGroup with the OnHostGroupChange trigger, which should run the TaskGroup on the
+        new hosts
+        :param group: The HostGroup or TempHostGroup to execute the tasks on
+        :param debug: Flag indicating the debug level for the TaskGroup
+        """
         self.debug = debug
         print("Created Asyncio TaskGroup")
         async with asyncio.TaskGroup() as tg:

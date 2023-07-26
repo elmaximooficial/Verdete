@@ -9,3 +9,5 @@ pandas
 pyarrow
 requests
 motor
+fastapi
+gunicorn

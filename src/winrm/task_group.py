@@ -24,6 +24,7 @@ class WinRMTaskGroup:
                     }
     debug: bool
     success: dict = []
+    host_groups = []
 
     @staticmethod
     async def fetch_task(name):
@@ -37,7 +38,7 @@ class WinRMTaskGroup:
         return task
 
     @staticmethod
-    async def create_task(tasks: list, name: str):
+    async def create_task(host_groups: list, tasks: list, name: str):
         """
         Creates a new task group and stores into the database
         :param tasks: The list of tasks to be executed
@@ -46,6 +47,7 @@ class WinRMTaskGroup:
         """
         task = WinRMTaskGroup(name=name)
         task.tasks = tasks
+        task.host_groups = host_groups
         task.__create_new()
 
     async def __from_db(self):
@@ -55,10 +57,13 @@ class WinRMTaskGroup:
                 print(f"Task Group {self.name} cannot be found on the database")
                 return
             self.tasks = database_task_group['tasks']
+            self.host_groups = database_task_group['host_groups']
 
     async def __create_new(self):
         async with MongoDBHandler() as handler:
-            await handler.insert(collection='winrm_task_group', data={"name": self.name, "tasks": self.tasks})
+            await handler.insert(collection='winrm_task_group', data={"name": self.name, 
+                                                                    "tasks": self.tasks,
+                                                                    "host_groups": self.host_groups})
 
     def __init__(self, name: str):
         """ This should not be called directly, use create_task() or fetch_task instead()"""
@@ -106,7 +111,7 @@ class WinRMTaskGroup:
             await connection.dispose()
 
     async def execute(self,
-                      group: (HostGroup | TempHostGroup),
+                      group: (HostGroup | TempHostGroup) = None,
                       debug: bool = False):
         """
         Executes the task group on the 'group' paramater.
@@ -118,13 +123,26 @@ class WinRMTaskGroup:
         :param debug: Flag indicating the debug level for the TaskGroup
         """
         self.debug = debug
-        print("Created Asyncio TaskGroup")
-        async with asyncio.TaskGroup() as tg:
-            print("Entering HostGroup loop")
-            async with MongoDBHandler() as handler:
-                async for i in group:
-                    tg.create_task(self.__execute_task(endpoint=i, user=group.user, db_handler=handler))
-        print(f"Success: {len(self.success)} Failure: {group.size - len(self.success)}")
+        if not self.host_groups and not group:
+            print("Inform a group for the Task Group to run on")
+            return
+        if group:
+            print("Created Asyncio TaskGroup")
+            async with asyncio.TaskGroup() as tg:
+                print("Entering HostGroup loop")
+                async with MongoDBHandler() as handler:
+                    async for i in group:
+                        tg.create_task(self.__execute_task(endpoint=i, user=group.user, db_handler=handler))
+            print(f"Success: {len(self.success)} Failure: {group.size - len(self.success)}")
+        for i in self.host_groups:
+            print("Created Asyncio TaskGroup")
+            async with asyncio.TaskGroup() as tg:
+                print("Entering HostGroup loop")
+                async with MongoDBHandler() as handler:
+                    async for j in i:
+                        tg.create_task(self.__execute_task(endpoint=j, user=i.user, db_handler=handler))
+            print(f"Success: {len(self.success)} Failure: {i.size - len(self.success)}")
+            
 
 
 

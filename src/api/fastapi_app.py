@@ -3,8 +3,9 @@ import functools
 
 from src.database.db_handler import MongoDBHandler
 from src.winrm.host_group import HostGroup
-from src.winrm.task_group import WinRMTaskGroup
+from src.winrm.task_group import WinRMTaskGroup, WinRMTask
 from src.util.task_formatter import TaskFormatter as tf
+from src.winrm.windows import WinRMConnection
 from fastapi import FastAPI, HTTPException, Header
 from typing import Annotated
 import threading
@@ -20,6 +21,11 @@ async def greetings():
         "version": '0.0.1-alpha'
     }
 
+################################################################################################
+################################################################################################
+############################################ TASKS #############################################
+################################################################################################
+################################################################################################
 
 @app.get("/winrmtask")
 async def get_all_task_groups():
@@ -61,12 +67,51 @@ async def get_task_group_results_for_host(name: str, host: str):
                                                   selection={'hostname': host},
                                                   projection={name: 1}))
 
-@app.post("/winrmtask/{name}/run/{group}")
-async def run_task(name: str, group: str):
+@app.post("/winrmtask/{name}")
+async def run_task(name: str):
+    task = await WinRMTaskGroup.fetch_task(name)
+    await task.execute()
+
+@app.post("/winrmtask/{name}/{group}")
+async def run_task_in_hostgroup(name: str, group: str):
     task = await WinRMTaskGroup.fetch_task(name)
     group = await HostGroup.fetch_hostgroup(group)
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(task.execute(group=group))
+    await task.execute(group=group)
+
+@app.put("/winrmtask")
+async def create_task(name: Annotated[str, Header()], 
+                      tasks: Annotated[list(WinRMTask), Header()],
+                      host_groups: Annotated[list(HostGroup), Header()]):
+    winrm_tasks = []
+    for i in tasks:
+        winrm_tasks.append({j.name: WinRMConnection.encode_command(j.script) for j in i})
+    await WinRMTaskGroup.create_task(host_groups=host_groups, tasks=winrm_tasks, name=name)
+
+@app.post("/winrmtask/update")
+async def update_task(name: Annotated[str, Header()],
+                      tasks: Annotated[list(WinRMTask), Header()],
+                      host_groups: Annotated[list(HostGroup), Header()]):
+    async with MongoDBHandler() as handler:
+        if not tasks:
+            await handler.upsert_one('winrm_task_groups', 
+                                    selection={"name": name},
+                                    operator="$set",
+                                    data={"host_groups": host_groups})
+            return
+        winrm_tasks = []
+        for i in tasks:
+            winrm_tasks.append({j.name: WinRMConnection.encode_command(j.script) for j in i})
+        await handler.upsert_one('winrm_task_group',
+                                 selection={"name": name},
+                                 operator="$set",
+                                 data={"tasks": winrm_tasks})
+
+################################################################################################
+################################################################################################
+########################################### GROUPS #############################################
+################################################################################################
+################################################################################################
+
 
 @app.get("/winrmhosts")
 async def fetch_all_host_groups():

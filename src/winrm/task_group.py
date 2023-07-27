@@ -97,10 +97,10 @@ class WinRMTaskGroup:
                         continue
                     else:
                         self.result_skeleton["Hostname"] = connection.transport.endpoint
-                        await db_handler.insert(collection='winrm_hosts', mode='csv',
-                                                data=[self.result_skeleton | {"Status": "OK",
+                        await db_handler.insert(collection='winrm_hosts',
+                                                data=self.result_skeleton | {"Status": "OK",
                                                             "Task Name": task_name,
-                                                           "Results": await tf.csv_to_dict(response.std_out)}])
+                                                           "Results": await tf.csv_to_dict(response.std_out)})
                         self.success.append(connection.hostname)
                         continue
             await connection.dispose()

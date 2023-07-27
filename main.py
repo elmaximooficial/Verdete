@@ -1,12 +1,9 @@
-from src.injector.ldap_injector import LDAPInjector
-from src.util.password_manager import PasswordManager, User
 from src.trigger.timer_trigger import TimerTrigger
-from src.winrm.host_group import HostGroup, Host
-from src.winrm.task_group import WinRMTaskGroup, WinRMTask
-from getpass import getpass
 from threading import Thread
 import asyncio
-import sys, getopt
+import sys
+from src.api.fastapi_app import *
+from prometheus_client import Counter
 
 ########## Configuration file format ##########
 #### [ldap]                              
@@ -30,36 +27,6 @@ class Main:
         timer_thread = Thread(name="Timer", target=timer.start, daemon=True)
         timer_thread.start()
 
-        opts, args = getopt.getopt(argv, '', ['fetch-computers', 'gen-password=', 'gen-key', 'query-computers', 'debug'])
-        for i, arg in opts:
-            if i in ['--gen-password']:
-                pass_manager = PasswordManager.load_key()
-                username, password = arg.split('~')
-                pass_manager.gen_encrypted_pwd(username=username, password=password)
-            if i in ['--gen-key']:
-                PasswordManager.gen_key()
-            if i in ['--fetch-computers']:
-                ldap_conn = LDAPInjector()
-                await ldap_conn.connect_to_server()
-                async for i in ldap_conn.fetch_computers():
-                    print(i)
-                await ldap_conn.dispose_connection()
-            if i in ['--query-computers']:
-                ldap_conn = LDAPInjector()
-                await ldap_conn.connect_to_server()
-                
-                username = input('Insert the Username: ')
-                password = getpass('Insert the Password: ')
-                
-                user = User(username, password)
-                all = HostGroup([i for i in ldap_conn.fetch_computers()], name="All", description="All Hosts from LDAP", user=user)
-                async for i in ldap_conn.fetch_computers():
-                    all.add_host(Host(hostname=i))
-
-                task_group = WinRMTaskGroup(WinRMTask("CPU", "Get-WMIObject Win32_Processor | "
-                                                             "Select name, manufacturer, description | "
-                                                             "ConvertTo-Csv"))
-                await task_group.execute(group=all, debug=True)
 
 if __name__ == '__main__':
     main = Main()

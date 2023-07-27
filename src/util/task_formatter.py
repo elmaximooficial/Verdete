@@ -22,9 +22,9 @@ class TaskFormatter:
 
     @staticmethod
     async def json_to_dict(data: str = None, file: str = None):
-        parsed = await asyncio.to_thread(partial(read_json,
-                                                 filepath_or_buffer=file if file else StringIO(data)))
-        return await asyncio.to_thread(partial(parsed.to_dict, orient='records'))
+        parsed = [await asyncio.to_thread(partial(read_json,
+                                                 filepath_or_buffer=file if file else StringIO(record))) for record in data]
+        return [await asyncio.to_thread(partial(i.to_dict, orient='records')) for i in parsed]
 
     @staticmethod
     async def xml_to_dict(data: str = None, file: str = None):

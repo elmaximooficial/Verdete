@@ -48,7 +48,7 @@ class MongoDBHandler:
         except FileNotFoundError:
             print('Configuration file not found in path, the default path for this is /etc/verdete/config.toml')
 
-    async def find(self, collection: str, selection: dict, projection: dict = None):
+    async def find(self, collection: str, selection: dict = None, projection: dict = None):
         """
         This is an async generator object
         :param collection: The collection in which to query
@@ -61,7 +61,7 @@ class MongoDBHandler:
                                                                                                  projection=projection):
             yield i
 
-    async def find_one(self, collection: str, selection: dict, projection: dict = None):
+    async def find_one(self, collection: str, selection: dict = None, projection: dict = None):
         """
         Queries the database for one document and returns it directly
         :param collection: The collection in which to search for the document

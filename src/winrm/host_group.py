@@ -43,7 +43,7 @@ class HostGroup:
         :return: The constructed Host Group, loaded from the database
         """
         host_group = HostGroup(name=name)
-        await host_group.__from_db(name=name)
+        await host_group.__from_db()
         return host_group
 
     @staticmethod
@@ -103,7 +103,7 @@ class HostGroup:
                 self.__hosts = [Host(i) for i in handler.find(database_host_group['hostnames']['collection'],
                                                               database_host_group['hostnames']['selection'],
                                                               {'hostnames': 1})]
-            except KeyError:
+            except:
                 self.__hosts = database_host_group['hostnames']
 
     async def __create_new(self):

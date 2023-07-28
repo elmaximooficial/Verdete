@@ -1,13 +1,9 @@
-from src.util.task_formatter import TaskFormatter as tf
-from motor.motor_asyncio import AsyncIOMotorClient
-from typing import Literal
-from collections import namedtuple
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCursor
+from typing import *
+from __future__ import annotations
+import logging
 import os
 import toml
-import json
-
-Index = namedtuple('Index', ['name', 'columns'])
-Field = namedtuple('Field', ['name', 'type', 'value'])
 
 
 class MongoDBHandler:
@@ -32,23 +28,25 @@ class MongoDBHandler:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def __fetch_configuration(self):
+    def __fetch_configuration(self) -> None:
         try:
-            path = os.path.join(os.path.dirname(__file__),
+            path: bytes = os.path.join(os.path.dirname(__file__),
                                 '../../resources/config.toml')
             with open(path, 'r') as config_file:
-                toml_file = toml.loads(config_file.read())
+                toml_file: dict[str, Any] = toml.loads(config_file.read())
                 if 'mongodb' in toml_file.keys():
                     self.user = toml_file["mongodb"]["user"]
                     self.password = toml_file["mongodb"]["password"]
                     self.server = toml_file["mongodb"]["server"]
                     self.port = toml_file["mongodb"]["port"] if not None else 27017
                 else:
-                    print('Configuration file doesn\'t have information regarding the SurrealDB connection')
+                    logging.error('Configuration file doesn\'t have information regarding the SurrealDB connection')
         except FileNotFoundError:
-            print('Configuration file not found in path, the default path for this is /etc/verdete/config.toml')
+            logging.error('Configuration file not found in path, the default path for this is /etc/verdete/config.toml')
 
-    async def find(self, collection: str, selection: dict = None, projection: dict = None):
+    async def find(self, collection: str,
+                   selection: dict[str, Any] = None,
+                   projection: dict[str, int] = None) -> AsyncGenerator | None:
         """
         This is an async generator object
         :param collection: The collection in which to query
@@ -61,7 +59,9 @@ class MongoDBHandler:
                                                                                                  projection=projection):
             yield i
 
-    async def find_one(self, collection: str, selection: dict = None, projection: dict = None):
+    async def find_one(self, collection: str,
+                       selection: dict[str, Any] = None,
+                       projection: dict[str, int] = None) -> AsyncIOMotorCursor | None:
         """
         Queries the database for one document and returns it directly
         :param collection: The collection in which to search for the document
@@ -73,7 +73,7 @@ class MongoDBHandler:
         return await self.mongo_client.get_database("verdete").get_collection(collection).find_one(filter=selection,
                                                                                                    projection=projection)
 
-    async def insert(self, collection: str, data: dict):
+    async def insert(self, collection: str, data: dict[str, Any]) -> dict[str, str]:
         """
         Inserts the 'data' dictionary, should only be used for few inserts, in case of massive
         batch inserts, use insert_batch instead
@@ -82,20 +82,20 @@ class MongoDBHandler:
 
         :return: The status of the insertion
         """
-        result = await self.mongo_client.get_database("verdete").get_collection(collection).insert_one(data)
+        result: Any = await self.mongo_client.get_database("verdete").get_collection(collection).insert_one(data)
         return {"Acknowledged": result.acknowledged, "ID": result.inserted_id}
 
-    async def insert_batch(self, collection: str, data: list):
+    async def insert_batch(self, collection: str, data: list[dict[str, Any]]):
         """
         Inserts a batch of documents into 'collection'
         :param collection: The collection in which to insert documents
         :param data: A list of the documents to be inserted
         :return: The results of the operation in low-level detail
         """
-        result = await self.mongo_client.get_database("verdete").get_collection(collection).bulk_write(data)
+        result: Any = await self.mongo_client.get_database("verdete").get_collection(collection).bulk_write(data)
         return result.bulk_api_result
 
-    async def repsert_one(self, collection: str, selection: dict, data: dict):
+    async def repsert_one(self, collection: str, selection: dict[str, Any], data: dict[str, str]):
         """
         Replaces the collection's document matched in the selection with the 'data' dictionary
         :param collection: The collection in which to search the document
@@ -103,9 +103,9 @@ class MongoDBHandler:
         :param data: The document to replace the match, this is a dictionary in MongoDB format
         :return: The results of the query
         """
-        result = await self.mongo_client.get_database("verdete").get_collection(collection).replace_one(filter=selection,
-                                                                                                        update=data,
-                                                                                                        upsert=True)
+        result: Any = await self.mongo_client.get_database("verdete").get_collection(collection).replace_one(filter=selection,
+                                                                                                             update=data,
+                                                                                                             upsert=True)
 
         return {
             "Acknowledged": result.acknowledged,
@@ -115,7 +115,10 @@ class MongoDBHandler:
             "Upserted ID": result.upserted_id
         }
 
-    async def upsert_one(self, collection: str, selection: dict, operator: str, data: dict):
+    async def upsert_one(self, collection: str,
+                         selection: dict[str, Any],
+                         operator: str,
+                         data: dict[str, Any]) -> dict[str, str]:
         """
         Updates the matched document with the 'data' using the 'operator', this is a 'one' upsert, for batch updates
         use upsert_many instead
@@ -136,7 +139,10 @@ class MongoDBHandler:
             "Upserted ID": result.upserted_id
         }
 
-    async def upsert_many(self, collection: str, selection: dict, operator: str, data: list):
+    async def upsert_many(self, collection: str,
+                          selection: dict[str, Any],
+                          operator: str,
+                          data: list[dict[str, Any]]) -> dict[str, str]:
         """
         Updates the matched document with the 'data' using the 'operator'
         :param collection: The collection in which to search the document

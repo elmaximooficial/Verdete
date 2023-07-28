@@ -11,3 +11,4 @@ requests
 motor
 fastapi
 gunicorn
+pydantic

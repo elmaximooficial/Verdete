@@ -1,18 +1,18 @@
 import asyncio
-import functools
-
 from src.database.db_handler import MongoDBHandler
-from src.winrm.host_group import HostGroup
+from src.winrm.host_group import HostGroup, Host
 from src.winrm.task_group import WinRMTaskGroup
-from src.util.task_formatter import TaskFormatter as tf
 from fastapi import FastAPI, HTTPException, Header
-from typing import Annotated
-import threading
+from typing import *
+import logging
+import json
 
-app = FastAPI()
+
+app: FastAPI = FastAPI()
+
 
 @app.get('/')
-async def greetings():
+async def greetings() -> dict[str, str]:
     return {
         "name": "Verdete",
         "description": "Network monitoring and managing software",
@@ -22,14 +22,15 @@ async def greetings():
 
 
 @app.get("/winrmtask")
-async def get_all_task_groups():
+async def get_all_task_groups() -> dict[str, Any] | None:
     async with MongoDBHandler() as handler:
-        task_groups = [i async for i in handler.find('winrm_task_group', projection={'_id': 0})]
+        task_groups: list[WinRMTaskGroup] = [i async for i in handler.find('winrm_task_group', projection={'_id': 0})]
         return task_groups
 
+
 @app.get("/winrmtask/{name}")
-async def get_task_group(name: str):
-    task_group = await WinRMTaskGroup.fetch_task(name)
+async def get_task_group(name: str) -> dict[str, Any] | None:
+    task_group: WinRMTaskGroup = await WinRMTaskGroup.fetch_task(name)
     if len(task_group.tasks) == 0:
         raise HTTPException(status_code=404, detail="Task Group not found")
     return {
@@ -39,14 +40,16 @@ async def get_task_group(name: str):
 
 
 @app.get("/winrmtask/wmi/results")
-async def get_wmi(projection: Annotated[str | None, Header()] = None):
+async def get_wmi(projection: Annotated[str | None, Header()]) -> list[dict[str, Any]] | None:
+    if not projection:
+        raise HTTPException(status_code=500, detail='Please inform the projection')
     async with MongoDBHandler() as handler:
-        print(f"PROJECTION: {projection}")
+        logging.debug(f"PROJECTION: {projection}")
         return [i async for i in handler.find(collection='wmi_hosts', projection={'_id': 0} | json.loads(projection))]
 
 
 @app.get("/winrmtask/{name}/results")
-async def get_task_group_results(name: str):
+async def get_task_group_results(name: str) -> list[dict[str, Any]] | None:
     if name == 'all':
         async with MongoDBHandler() as handler:
             return [i async for i in handler.find(collection='winrm_hosts', projection={'_id': 0})]
@@ -55,31 +58,35 @@ async def get_task_group_results(name: str):
 
 
 @app.get("/winrmtask/{name}/results/{host}")
-async def get_task_group_results_for_host(name: str, host: str):
+async def get_task_group_results_for_host(name: str, host: str) -> dict[str, Any] | None:
     async with MongoDBHandler() as handler:
-        return tf.json_to_dict(await handler.find(collection='winrm_hosts',
-                                                  selection={'hostname': host},
-                                                  projection={name: 1}))
+        return await handler.find(collection='winrm_hosts',
+                                  selection={'hostname': host},
+                                  projection={name: 1})
+
 
 @app.post("/winrmtask/{name}/run/{group}")
-async def run_task(name: str, group: str):
-    task = await WinRMTaskGroup.fetch_task(name)
-    group = await HostGroup.fetch_hostgroup(group)
+async def run_task(name: str, group: str) -> None:
+    task: WinRMTaskGroup = await WinRMTaskGroup.fetch_task(name)
+    group: HostGroup = await HostGroup.fetch_hostgroup(group)
+    if not task or not group:
+        raise HTTPException(status_code=404, detail="Inform a valid Task Group and Host Group")
     async with asyncio.TaskGroup() as tg:
         tg.create_task(task.execute(group=group))
 
+
 @app.get("/winrmhosts")
-async def fetch_all_host_groups():
+async def fetch_all_host_groups() -> list[HostGroup] | None:
     async with MongoDBHandler() as handler:
         host_groups = [i async for i in handler.find(collection='winrm_host_groups', projection={'_id': 0})]
         return host_groups
 
 
 @app.get("/winrmhosts/{name}")
-async def fetch_host_group(name: str):
-    host_group = await HostGroup.fetch_hostgroup(name)
-    hosts = [i async for i in host_group]
-    if host_group.size == 0:
+async def fetch_host_group(name: str) -> dict[str, str | list[Host]]:
+    host_group: HostGroup = await HostGroup.fetch_hostgroup(name)
+    hosts: list[Host] = [i async for i in host_group]
+    if not host_group or not hosts:
         raise HTTPException(status_code=404, detail="Host Group not found")
     return {
         "name": host_group.name,

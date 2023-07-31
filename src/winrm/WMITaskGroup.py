@@ -64,11 +64,11 @@ class Essential(BaseModel):
     os_system_drive: str
     net_interfaces: list[NetInterface]
     printers: list[Printer]
-    computer_admin_password_state: int
+    computer_admin_password_status: int
     computer_boot_status: str
-    computer_boot_up_state: str
+    computer_boot_up_state: list[int]
     computer_chassis_sku_number: str
-    computer_current_time_zone: str
+    computer_current_time_zone: int
     computer_oem_string_array: list[str]
     computer_primary_owner_name: str
     computer_system_family: str
@@ -77,6 +77,25 @@ class Essential(BaseModel):
     computer_system_sku_number: str
     computer_total_physical_memory: int
     computer_user_name: str
+
+class Disk(NamedTuple):
+    disk_caption: str
+    disk_compression_method: str
+    disk_description: str
+    disk_default_block_size: int
+    disk_firmware_revision: str
+    disk_index: int
+    disk_interface_type: str
+    disk_manufacturer: str
+    disk_model: str
+    disk_serial: str
+    disk_size: int
+    disk_status: str
+    disk_status_info: str
+    disk_total_cylinders: int
+    disk_total_heads: int
+    disk_total_sectors: int
+    disk_total_tracks: int
 
 class Secondary(BaseModel):
     mem_capacity: int
@@ -103,6 +122,130 @@ class Secondary(BaseModel):
     mobo_serial: str
     mobo_sku: str
     mobo_version: str
+    mobo_status: str
+    mobo_weight: int
+    mobo_width: int
+    mobo_slot_layout: str
+    software_caption: str
+    software_description: str
+    software_id: str
+    software_install_date: datetime.date
+    software_last_use: datetime.date
+    software_product_name: str
+    software_vendor: str
+    software_version: str
+    disk: list[Disk]
+    gpu_accelerator_capabilities: list[str]
+    gpu_adapter_compatibility: str
+    gpu_adapter_dac_type: str
+    gpu_adapter_ram: str
+    gpu_caption: str
+    gpu_color_table_entries: list[str]
+    gpu_current_refresh_rate: int
+    gpu_description: str
+    gpu_driver_date: datetime.date
+    gpu_driver_version: str
+    gpu_inf_file_name: str
+    gpu_inf_section: str
+    gpu_install_date: datetime.date
+    gpu_last_error_code: int
+    gpu_status: str
+    gpu_status_info: str
+
+class Monitor(NamedTuple):
+    caption: str
+    description: str
+    manufacturer: str
+    type: str
+    name: str
+    pixels_per_logical_x_inch: int
+    pixels_per_logical_y_inch: int
+    screen_height: int
+    screen_width: int
+    status: str
+    status_info: str
+
+class Product(NamedTuple):
+    product_caption: str
+    product_description: str
+    product_id: str
+    product_install_date: datetime.date
+    product_install_source: str
+    product_local_package: str
+    product_name: str
+    product_package_name: str
+    product_package_id: str
+    product_sku: str
+    product_version: str
+    product_vendor: str
+
+class Tertiary(BaseModel):
+    bios_characteristics: list[int]
+    bios_version: str
+    bios_build_number: str
+    bios_caption: str
+    bios_current_language: str
+    bios_description: str
+    bios_install_date: datetime.date
+    bios_manufacturer: str
+    bios_name: str
+    bios_serial: str
+    bios_release_date: datetime.date
+    monitor: list[Monitor]
+    keyboard_caption: str
+    keyboard_description: str
+    keyboard_name: str
+    keyboard_status: str
+    keyboard_status_info: str
+    mouse_caption: str
+    mouse_description: str
+    mouse_hardware_type: str
+    mouse_inf_file_name: str
+    mouse_inf_section: str
+    mouse_manufacturer: str
+    mouse_name: str
+    mouse_number_of_buttons: str
+    mouse_pointing_type: str
+    mouse_status: str
+    mouse_status_info: str
+    products: list[Product]
+
+class Service(NamedTuple):
+    caption: str
+    check_point: str
+    description: str
+    display_name: str
+    install_date: datetime.date
+    path_name: str
+    name: str
+    process_id: int
+    started: bool
+    start_mode: str
+    start_name: str
+    status: str
+    status_info: str
+
+class Share(NamedTuple):
+    caption: str
+    description: str
+    install_date: datetime.date
+    maximum_allowed: int
+    name: str
+    path: str
+    status: str
+    type: str
+
+class NonEssential(BaseModel):
+    kb_caption: str
+    kb_description: str
+    kb_comments: str
+    kb_id: str
+    kb_install_date: datetime.date
+    kb_name: str
+    kb_status: str
+    kb_installed_by: str
+    services: list[Service]
+    shares: list[Share]
 
 class WMITaskGroup:
     tasks = [{'name': 'Essential',

@@ -36,7 +36,7 @@ $gpu = Get-WmiObject WIn32_VideoController | Select-Object AcceleratorCapabilite
 	"mobo_version": "$($mobo.version)",
 	"mobo_status": "$($mobo.status)",
 	"mobo_weight": "$($mobo.weight)",
-	"mobo_widht": "$($mobo.width)",
+	"mobo_width": "$($mobo.width)",
 	"mobo_slot_layout": "$($mobo.slotlayout)",
 	"softwares": [$($softwares_formatted = New-Object System.Collections.Generic.List[System.Object];Foreach($software in $softwares){
 	$softwares_formatted.Add("

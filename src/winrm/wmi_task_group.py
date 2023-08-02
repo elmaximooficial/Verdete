@@ -1,10 +1,12 @@
 import datetime
 
-from src.winrm.windows import WINRM_TRANSPORT, WINRM_PROTOCOL, WinRMConnection
+from src.winrm.windows import WINRM_TRANSPORT, WINRM_PROTOCOL, WinRMConnection, Response
+from src.util.task_formatter import TaskFormatter as tf
 from src.winrm.host_group import HostGroup
-from src.winrm.task_group import WinRMTask
 from pydantic import BaseModel
 from typing import NamedTuple
+import logging
+
 
 class NetInterface(NamedTuple):
     default_gateway: str
@@ -18,6 +20,7 @@ class NetInterface(NamedTuple):
     index: int
     interface_index: int
     mac_address: str
+
 
 class Printer(NamedTuple):
     name: str
@@ -36,6 +39,7 @@ class Printer(NamedTuple):
     spooler_name: str
     status: str
     status_info: str
+
 
 class Essential(BaseModel):
     cpu_architecture: str
@@ -78,6 +82,7 @@ class Essential(BaseModel):
     computer_total_physical_memory: int
     computer_user_name: str
 
+
 class Disk(NamedTuple):
     disk_caption: str
     disk_compression_method: str
@@ -96,6 +101,7 @@ class Disk(NamedTuple):
     disk_total_heads: int
     disk_total_sectors: int
     disk_total_tracks: int
+
 
 class Secondary(BaseModel):
     mem_capacity: int
@@ -152,6 +158,7 @@ class Secondary(BaseModel):
     gpu_status: str
     gpu_status_info: str
 
+
 class Monitor(NamedTuple):
     caption: str
     description: str
@@ -165,6 +172,7 @@ class Monitor(NamedTuple):
     status: str
     status_info: str
 
+
 class Product(NamedTuple):
     product_caption: str
     product_description: str
@@ -174,10 +182,10 @@ class Product(NamedTuple):
     product_local_package: str
     product_name: str
     product_package_name: str
-    product_package_id: str
     product_sku: str
     product_version: str
     product_vendor: str
+
 
 class Tertiary(BaseModel):
     bios_characteristics: list[int]
@@ -191,7 +199,7 @@ class Tertiary(BaseModel):
     bios_name: str
     bios_serial: str
     bios_release_date: datetime.date
-    monitor: list[Monitor]
+    monitors: list[Monitor]
     keyboard_caption: str
     keyboard_description: str
     keyboard_name: str
@@ -210,6 +218,7 @@ class Tertiary(BaseModel):
     mouse_status_info: str
     products: list[Product]
 
+
 class Service(NamedTuple):
     caption: str
     check_point: str
@@ -225,6 +234,7 @@ class Service(NamedTuple):
     status: str
     status_info: str
 
+
 class Share(NamedTuple):
     caption: str
     description: str
@@ -235,7 +245,8 @@ class Share(NamedTuple):
     status: str
     type: str
 
-class NonEssential(BaseModel):
+
+class KB(NamedTuple):
     kb_caption: str
     kb_description: str
     kb_comments: str
@@ -244,34 +255,66 @@ class NonEssential(BaseModel):
     kb_name: str
     kb_status: str
     kb_installed_by: str
+
+
+class NonEssential(BaseModel):
     services: list[Service]
     shares: list[Share]
+    kbs: list[KB]
+
 
 class WMITaskGroup:
+    essential = open('essential.ps1')
+    secondary = open('secondary.ps1')
+    tertiary = open('tertiary.ps1')
+    nonessential = open('nonessential.ps1')
+
     tasks = [{'name': 'Essential',
-              'tasks': WinRMConnection.encode_command(
-                  r'$processor = Get-WmiObject Win32_Processor | Select Architecture, Caption, Description, Manufacturer, Name, NumberOfCores, NumberOfLogicalProcessors, SerialNumber, ProcessorsId' +
-                  r'$os = Get-WmiObject Win32_OperatingSystem | Select BootDevice, BuildNumber, BuildType, Caption, CountryCode, Description, InstallDate, LastBootUpTime, LocalDateTime, Organization, OSArchitecture, SerialNumber, RegisteredUser, Version, SystemDrive' +
-                  r'$net = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $True} | Select DefaultIPGateway, Description, DHCPEnabled, DHCPServer, DNSServerSearchOrder, DHCPLeaseExpires, DHCPLeaseObtained, IPAddress, Index, InterfaceIndex, MACAddress' +
-                  r'$printer = Get-WmiObject Win32_Printer | Select Name, PortName, DriverName, Default, AveragePagesPerMinute, CapabilityDescription, Caption, DeviceID, Network, PrinterState, PrinterStatus, Priority, ServerName, SpoolEnabled, Status, StatusInfo' +
-                  r'$computer = Get-WmiObject Win32_ComputerSystem | Select AdminPasswordStates, BootStatus, BootupState, ChassisSKUNumber, CurrentTimeZone, OEMStringArray, PrimaryOwnerName, SystemFamily, Manufacturer, Model, SystemSKUNumber, TotalPhysicalMemory, UserName')},
+              'tasks': WinRMConnection.encode_command(essential.read())},
              {'name': "Secondary",
-              'tasks': WinRMConnection.encode_command(
-                  r'$mem = Get-WmiObject Win32_PhysicalMemory | Select Capacity, Caption, ConfiguredClockSpeed, ConfiguredVoltage, DataWidth, Description, DeviceLocator, FormFactor, Manufacturer, PartNumber, SerialNumber, Speed' +
-                  r'$mobo = Get-WmiObject Win32_BaseBoard | Select Description, Height, HostingBoard, InstallDate, Manufacturer, Name, Model, PartNumber, Product, SerialNumber, SKU, Version, Status, Weight, Width, SlotLayout' +
-                  r'$software = Get-WmiObject Win32_SoftwareFeature | Select Caption, Description, IdentifyingNumber, InstallDate, LastUse, ProductName, Vendor, Version' +
-                  r'$disk = Get-WmiObject Win32_DiskDrive | Select Caption, CompressionMethod, Description, DefaultBlockSize, FirmwareRevision, Index, InterfaceType, Manufacturer, Model, SerialNumber, Size, Status, StatusInfo, TotalCylinders, TotalHeads, TotalSectors, TotalTracks' +
-                  r'$gpu = Get-WmiObject Win32_VideoController | Select AcceleratorCapabilities, AdapterCompatibility, AdapterDACType, AdapterRAM, Caption, ColoTableEntries, CurrentRefreshRate, Description, DriverDate, DriverVersion, InfFilename, InfSection, InstallDate, LastErrorCode, Status, StatusInfo')},
+              'tasks': WinRMConnection.encode_command(secondary.read())},
              {'name': "Tertiary",
-              'tasks': WinRMConnection.encode_command(
-                  r'$bios = Get-WmiObject Win32_BIOS | Select BiosCharacteristics, BIOSVersion, BuildNumber, Caption, CurrentLanguage, Description, InstallDate, Manufacturer, Name, SerialNumber, ReleaseDate' +
-                  r'$monitor = Get-WmiObject Win32_DesktopMonitor | Select Caption, Description, MonitorManufacturer, MonitorType, Name, PixelsPerLogicalXInch, PixelsPerLogicalYInch, ScreenHeight, ScreenWidth, Status, StatusInfo' +
-                  r'$keyboard = Get-WmiObject Win32_Keyboard | Select Caption, Description, Name, Status, StatusInfo' +
-                  r'$mouse = Get-WmiObject Win32_PointingDevice | Select Caption, Description, HardwareType, InfFileName, InfSection, Manufacturer, Name, NumberOfButtons, PointingType, Status, StatusInfo' +
-                  r'$product = Get-WmiObject Win32_Product | Select Caption, Description, IdentifyingNumber, InstallDate, InstallSource, LocalPackage, Name, PackageName, ProductID, SKUNumber, Version, Vendor')},
+              'tasks': WinRMConnection.encode_command(tertiary.read())},
              {'name': 'Non-Essential',
-              'tasks': WinRMConnection.encode_command(
-                  r'$kb = Get-WmiObject Win32_QuickFixEngineering | Select Caption, Description, FixComments, HotFixID, InstallDate, Name, Status, InstalledBy' +
-                  r'$service = Get-WmiObject Win32_Service | Select Caption, CheckPoint, Description, DisplayName, InstallDate, PathName, Name, ProcessId, Started, StartMode, StartName, State, Status' +
-                  r'$share = Get-WmiObject Win32_Share | Select Caption, Description, InstallDate, MaximumAllowed, Name, Path, Status, Type')}]
-    async def execute(self):
+              'tasks': WinRMConnection.encode_command(nonessential.read())}]
+
+    essential.close()
+    secondary.close()
+    tertiary.close()
+    nonessential.close()
+
+    async def __execute_task(self, endpoint, user, db_handler):
+        connection_string = f"{endpoint['protocol']}://{endpoint['hostname']}:{endpoint['port']}"
+        connection: WinRMConnection = WinRMConnection(endpoint=connection_string,
+                                                      username=user.username,
+                                                      password=user.password,
+                                                      server_cert_validation='ignore',
+                                                      transport=endpoint['transport'])
+        logging.debug(f"Connecting to Endpoint {endpoint}")
+
+        if connection.shell_id is not None:
+            logging.debug("Entering TaskGroup loop")
+            for i in self.tasks:
+                await connection.connect()
+                for task_name, encoded in i.items():
+                    logging.debug("Executing task")
+                    res: tuple[str] | None = await connection.execute_ps(encoded=encoded)
+                    logging.debug("Parsing Response")
+                    response: Response | None = None if res is None else Response(res)
+                    logging.debug("Cheking for Errors")
+                    if response is None or response.status_code != 0:
+                        self.result_skeleton["Hostname"] = connection.transport.endpoint
+                        logging.info(self.result_skeleton | {"Status": "Failure",
+                                                             "Task Name": task_name,
+                                                             "Error Code": "No response" if not response
+                                                             else response.std_err})
+                        continue
+                    self.result_skeleton["Hostname"] = connection.transport.endpoint
+                    data = self.result_skeleton | {"Status": "OK",
+                                                    "Task Name": task_name,
+                                                    "Results": await tf.csv_to_dict(response.std_out)}
+                    logging.info(data)
+                    await db_handler.insert(collection='wmi_task',
+                                            data=data)
+                    self.success.append(connection.hostname)
+                await connection.dispose()

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import concurrent.futures
 import winrm.protocol
 import logging
@@ -8,9 +9,7 @@ from enum import StrEnum
 from base64 import b64encode
 from winrm.exceptions import *
 from requests.exceptions import *
-from __future__ import annotations
 from typing import *
-
 
 class WINRM_TRANSPORT(StrEnum):
     NTLM = "ntlm"
@@ -20,13 +19,6 @@ class WINRM_TRANSPORT(StrEnum):
 class WINRM_PROTOCOL(StrEnum):
     HTTP = "http"
     HTTPS = "https"
-
-
-class Response(NamedTuple):
-    std_out: str
-    std_err: str
-    status_code: int
-
 
 class WinRMConnection(winrm.protocol.Protocol):
     """
@@ -49,16 +41,12 @@ class WinRMConnection(winrm.protocol.Protocol):
             command_id: str = await loop.run_in_executor(None,
                                                          functools.partial(self.run_command,
                                                                            shell_id=self.shell_id,
-                                                                           command='powershell -encodedcommand {0}'
-                                                                           .format(encoded)))
+                                                                           command='powershell -EncodedCommand {0}'.format(encoded)))
             command_output: tuple[bytes, int] = await loop.run_in_executor(None,
                                                                            functools.partial(self.get_command_output,
                                                                                              shell_id=self.shell_id,
                                                                                              command_id=command_id))
-            result: tuple[str] = Response(std_out=command_output[0].decode('cp860'),
-                                          std_err=command_output[1].decode('cp860'),
-                                          status_code=command_output[2])
-            return result
+            return command_output
         except ConnectionError:
             logging.warning(f"Could not connect to {self.transport.endpoint}")
         except InvalidURL:
@@ -88,10 +76,7 @@ class WinRMConnection(winrm.protocol.Protocol):
                                                                            functools.partial(self.get_command_output,
                                                                                              shell_id=self.shell_id,
                                                                                              command_id=command_id))
-            result: tuple[str] = Response(std_out=command_output[0].decode('cp860'),
-                                          std_err=command_output[1].decode('cp860'),
-                                          status_code=command_output[2])
-            return result
+            return command_output
         except ConnectionError:
             logging.warning(f"Could not connect to {self.transport.endpoint}")
         except InvalidURL:

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import concurrent.futures
 import datetime
@@ -5,7 +6,6 @@ import datetime
 from pandas import read_table, read_json, read_xml, DataFrame
 from io import StringIO
 from functools import partial
-from __future__ import annotations
 from typing import *
 
 

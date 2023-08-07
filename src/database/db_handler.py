@@ -1,6 +1,6 @@
+from __future__ import annotations
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCursor
 from typing import *
-from __future__ import annotations
 import logging
 import os
 import toml

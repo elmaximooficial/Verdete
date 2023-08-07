@@ -1,8 +1,8 @@
+from __future__ import annotations
 from src.database.db_handler import MongoDBHandler
 from src.winrm.windows import WINRM_TRANSPORT, WINRM_PROTOCOL
 from src.util.password_manager import User
 from collections import namedtuple
-from __future__ import annotations
 from typing import *
 import logging
 
@@ -23,16 +23,16 @@ class TempHostGroup(NamedTuple):
     hostnames: list[Host]
     user: User
     size: int
-    __index: int = 0
+    index: int = 0
 
     def __aiter__(self):
         return self
 
     async def __anext__(self):
-        self.__index += 1
-        if self.__index >= len(self.hostnames):
+        self.index += 1
+        if self.index >= len(self.hostnames):
             raise StopAsyncIteration
-        return self.hostnames[self.__index]
+        return self.hostnames[self.index]
 
 
 class HostGroup:

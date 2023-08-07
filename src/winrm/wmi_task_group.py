@@ -1,12 +1,15 @@
 import datetime
-
-from src.winrm.windows import WINRM_TRANSPORT, WINRM_PROTOCOL, WinRMConnection, Response
+import os
+from src.winrm.windows import WINRM_TRANSPORT, WINRM_PROTOCOL, WinRMConnection
+from winrm import Response
 from src.util.task_formatter import TaskFormatter as tf
 from src.winrm.host_group import HostGroup
+from src.database.db_handler import MongoDBHandler
 from pydantic import BaseModel
 from typing import NamedTuple
 import logging
-
+import asyncio
+import datetime
 
 class NetInterface(NamedTuple):
     default_gateway: str
@@ -264,57 +267,89 @@ class NonEssential(BaseModel):
 
 
 class WMITaskGroup:
-    essential = open('essential.ps1')
-    secondary = open('secondary.ps1')
-    tertiary = open('tertiary.ps1')
-    nonessential = open('nonessential.ps1')
+    tasks = []
+    success = []
+    result_skeleton = {
+                        "Hostname": None,
+                        "Timestamp": datetime.datetime.now().isoformat(),
+                    }
+    def __init__(self):
+        path: bytes = os.path.dirname(__file__)
+        essential = open(os.path.join(path, 'essential.ps1'))
+        essential2 = open(os.path.join(path, 'essential2.ps1'))
+        secondary = open(os.path.join(path, 'secondary.ps1'))
+        tertiary = open(os.path.join(path, 'tertiary.ps1'))
+        nonessential = open(os.path.join(path, 'nonessential.ps1'))
+        self.tasks = [{'name': 'Essential',
+                       'tasks': WinRMConnection.encode_command(essential.read())},
+                      {'name': 'Essential2',
+                       'tasks': WinRMConnection.encode_command(essential2.read())}]
 
-    tasks = [{'name': 'Essential',
-              'tasks': WinRMConnection.encode_command(essential.read())},
-             {'name': "Secondary",
-              'tasks': WinRMConnection.encode_command(secondary.read())},
-             {'name': "Tertiary",
-              'tasks': WinRMConnection.encode_command(tertiary.read())},
-             {'name': 'Non-Essential',
-              'tasks': WinRMConnection.encode_command(nonessential.read())}]
+        #{'name': "Secondary",
+        # 'tasks': WinRMConnection.encode_command(secondary.read())},
+        #{'name': "Tertiary",
+        # 'tasks': WinRMConnection.encode_command(tertiary.read())},
+        #{'name': 'Non-Essential',
+        # 'tasks': WinRMConnection.encode_command(nonessential.read())}
 
-    essential.close()
-    secondary.close()
-    tertiary.close()
-    nonessential.close()
+        essential.close()
+        secondary.close()
+        tertiary.close()
+        nonessential.close()
 
     async def __execute_task(self, endpoint, user, db_handler):
-        connection_string = f"{endpoint['protocol']}://{endpoint['hostname']}:{endpoint['port']}"
+        connection_string = f"{endpoint['protocol']}://{endpoint['hostname']}:{endpoint['port']}/wsman"
         connection: WinRMConnection = WinRMConnection(endpoint=connection_string,
                                                       username=user.username,
                                                       password=user.password,
                                                       server_cert_validation='ignore',
                                                       transport=endpoint['transport'])
         logging.debug(f"Connecting to Endpoint {endpoint}")
-
-        if connection.shell_id is not None:
-            logging.debug("Entering TaskGroup loop")
-            for i in self.tasks:
-                await connection.connect()
+        logging.debug("Entering TaskGroup loop")
+        for i in self.tasks:
+            await connection.connect()
+            if connection.shell_id is not None:
                 for task_name, encoded in i.items():
                     logging.debug("Executing task")
                     res: tuple[str] | None = await connection.execute_ps(encoded=encoded)
+                    if res is not None:
+                        res = Response(res)
                     logging.debug("Parsing Response")
-                    response: Response | None = None if res is None else Response(res)
                     logging.debug("Cheking for Errors")
-                    if response is None or response.status_code != 0:
+                    if res is None or res.status_code != 0:
                         self.result_skeleton["Hostname"] = connection.transport.endpoint
                         logging.info(self.result_skeleton | {"Status": "Failure",
                                                              "Task Name": task_name,
-                                                             "Error Code": "No response" if not response
-                                                             else response.std_err})
+                                                             "Error Code": "No response" if not res
+                                                             else res.std_err})
                         continue
                     self.result_skeleton["Hostname"] = connection.transport.endpoint
                     data = self.result_skeleton | {"Status": "OK",
                                                     "Task Name": task_name,
-                                                    "Results": await tf.csv_to_dict(response.std_out)}
+                                                    "Results": res.std_out}
                     logging.info(data)
-                    await db_handler.insert(collection='wmi_task',
-                                            data=data)
+                    #await db_handler.insert(collection='wmi_task',
+                    #                        data=data)
                     self.success.append(connection.hostname)
                 await connection.dispose()
+
+    async def execute(self,
+                      group: HostGroup) -> None:
+        """
+        Executes the task group on the 'group' paramater.
+        There are two options for group, the HostGroup which is a full on HostGroup stored in the database, and the
+        TempHostGroup, which is a more flexible type of HostGroup, stored in memory for how long as this task exists.
+        Can be useful when executing a TaskGroup with the OnHostGroupChange trigger, which should run the TaskGroup on the
+        new hosts
+        :param group: The HostGroup or TempHostGroup to execute the tasks on
+        :param debug: Flag indicating the debug level for the TaskGroup
+        """
+        logging.debug("Created Asyncio TaskGroup")
+        async with asyncio.TaskGroup() as tg:
+            logging.debug("Entering HostGroup loop")
+            async with MongoDBHandler() as handler:
+                async for i in group:
+                    tg.create_task(self.__execute_task(endpoint=i,
+                                                       user=group.user,
+                                                       db_handler=handler))
+        logging.info(f"Success: {len(self.success)} Failure: {group.size - len(self.success)}")

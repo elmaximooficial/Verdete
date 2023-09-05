@@ -1,0 +1,33 @@
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+            xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+            xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd"
+            xmlns:p="http://schemas.microsoft.com/wbem/wsman/1/wsman.xsd">
+    <s:Header>
+        <a:To>
+            http://ADM002:5985/wsman
+        </a:To>
+        <a:ReplyTo>
+            <a:Address mustUnderstand="true">
+                http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous
+            </a:Address>
+        </a:ReplyTo>
+        <w:ResourceURI s:mustUnderstand="true">
+            http://schemas.microsoft.com/wbem/wsman/1/wmi/root/cimv2/win32_service
+        </w:ResourceURI>
+        <a:Action s:mustUnderstand="true">
+            http://schemas.xmlsoap.org/ws/2004/09/transfer/Get
+        </a:Action>
+        <w:MaxEnvelopeSize s:mustUnderstand="true">512000</w:MaxEnvelopeSize>
+        <a:MessageId>uuid:9C6E03AE-E327-49CE-9313-600697DD6A86</a:MessageId>
+        <w:Locale xml:lang="pt-BR" s:mustUnderstand="false"/>
+        <p:DataLocale xml:lang="pt-BR" s:mustUnderstand="false"/>
+        <p:SessionId s:mustUnderstand="false">uuid:F6CDCD6E-4090-42CE-A85B-818C6E0C5760</p:SessionId>
+        <p:OperationId s:mustUnderstand="false">uuid:25DEA28A-CEA2-455F-A8D7-B81535F75F76</p:OperationId>
+        <p:SequenceId s:mustUnderstand="false">1</p:SequenceId>
+        <w:SelectorSet>
+            <w:Selector Name="name">winrm</w:Selector>
+        </w:SelectorSet>
+        <w:OperationTimeout>PT60.000S</w:OperationTimeout>
+    </s:Header>
+    <s:Body></s:Body>
+</s:Envelope>

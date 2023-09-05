@@ -6,9 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = {version = "1.32.0", features=["full"]}
-reqwest = {version = "0.11", features=["json"]}
-tokio-postgres = "0.7.0"
-chrono = "0.4.26"
-regex = "1.9"
-string-builder = "0.2"
+tokio = {version = "1.32.0", features = ["rt", "net"]}
+mongodb = {version = "2.6.1", features = ["tokio-runtime", "zstd-compression"]}
+bson = "2.6.1"
+serde = "1.0"
+async-trait = "0.1"
+ldap3 = {version = "0.11.3", features = ["gssapi"]}
+toml = "0.7"
+curl = {version = "0.4", features = ["spnego", "ntlm", "static-curl"]}
+async-curl = "0.1"
+uuid = {version = "1.4", features = ["v4"]}
+hard-xml = "1.25"
+async-ssh2-tokio = { version = "0.7.1", features = ["openssl"] }
+utf16string = "0.2.0"
+base64 = "0.21.3"
